@@ -1,0 +1,32 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Env / secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+credentials.json
+
+# Python
+__pycache__/
+.venv/
+venv/
+*.pyc
+
+# Node
+node_modules/
+dist/
+build/
+.cache/
+
+# Local DBs
+*.sql.gz
+dump.rdb
+
+# Course PDF — keep local unless the team agrees to upload it
+INF2003_project_description.pdf
