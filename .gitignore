@@ -28,5 +28,5 @@ build/
 *.sql.gz
 dump.rdb
 
-# Course PDF — keep local unless the team agrees to upload it
+# Course brief — local reference only, never push
 INF2003_project_description.pdf
