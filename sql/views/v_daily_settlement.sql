@@ -1,0 +1,12 @@
+-- v_daily_settlement.sql
+-- Owner: LANCEA — Iter 2
+-- Purpose: today's sales, avg ticket by cuisine, cash vs PayNow
+-- Kristen's owner screen reads from this view directly — no fake totals.
+
+-- TODO Lancea:
+-- CREATE OR REPLACE VIEW v_daily_settlement AS
+-- SELECT ...
+-- FROM orders o
+-- JOIN payment p ON p.order_id = o.order_id
+-- WHERE DATE(o.created_at) = CURDATE()
+-- GROUP BY ...;

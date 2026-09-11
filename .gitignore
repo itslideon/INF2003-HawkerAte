@@ -1,32 +1,20 @@
-# OS / editor
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-
-# Env / secrets — never commit
-.env
-.env.*
-!.env.example
-*.pem
-credentials.json
-
-# Python
-__pycache__/
-.venv/
-venv/
-*.pyc
-
-# Node
+# dependencies
 node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# env / secrets
+.env
+.env.local
+
+# large / official raw downloads — note the download date in etl/raw/README.md instead
+etl/raw/*
+!etl/raw/README.md
+
+# build output
 dist/
 build/
-.cache/
 
-# Local DBs
-*.sql.gz
-dump.rdb
-
-# Course brief — local reference only, never push
-INF2003_project_description.pdf
+# OS junk
+.DS_Store

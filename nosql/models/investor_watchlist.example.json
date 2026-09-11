@@ -1,0 +1,7 @@
+{
+  "_id": "ObjectId(...)",
+  "customer_id": 5,
+  "watched_centre_ids": [1, 4, 9],
+  "watched_stall_ids": [],
+  "created_at": "2026-10-20T00:00:00Z"
+}

@@ -1,0 +1,45 @@
+[
+  {
+    "_id": "ObjectId(...)",
+    "order_id": 1042,
+    "stall_id": 17,
+    "customer_id": 88,
+    "amount": 6.50,
+    "method": "paynow",
+    "event_type": "payment",
+    "paynow_ref": "PN-20261004-0007",
+    "created_at": "2026-10-04T12:31:05Z"
+  },
+  {
+    "_id": "ObjectId(...)",
+    "order_id": 1043,
+    "stall_id": 17,
+    "customer_id": 41,
+    "amount": 4.20,
+    "method": "card",
+    "event_type": "payment",
+    "card_last4": "4242",
+    "created_at": "2026-10-04T12:33:10Z"
+  },
+  {
+    "_id": "ObjectId(...)",
+    "order_id": 1044,
+    "stall_id": 9,
+    "customer_id": 12,
+    "amount": 3.80,
+    "method": "cash",
+    "event_type": "payment",
+    "created_at": "2026-10-04T12:40:22Z"
+  },
+  {
+    "_id": "ObjectId(...)",
+    "order_id": 1042,
+    "stall_id": 17,
+    "customer_id": 88,
+    "amount": -6.50,
+    "method": "paynow",
+    "event_type": "refund",
+    "reversed_event_id": "ObjectId(of the original payment doc above)",
+    "created_at": "2026-10-05T09:00:00Z"
+  }
+]
