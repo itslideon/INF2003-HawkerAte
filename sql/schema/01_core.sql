@@ -14,7 +14,8 @@ CREATE TABLE hawker_centre (
     postal_code     VARCHAR(10),
     latitude        DECIMAL(9,6),
     longitude       DECIMAL(9,6),
-    stall_count     INT,                              -- TODO Tanvi: from NEA dataset, or derive via COUNT(*)?
+    -- stall_count is NOT stored here — derive live via
+    -- SELECT COUNT(*) FROM stall WHERE centre_id = ? AND is_deleted = 0
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -22,8 +23,10 @@ CREATE TABLE stall (
     stall_id        INT AUTO_INCREMENT PRIMARY KEY,
     centre_id       INT NOT NULL,
     name            VARCHAR(150) NOT NULL,
-    cuisine_type    VARCHAR(100),                      -- TODO Tanvi: confirm — Lancea's "avg ticket by cuisine" view needs this
-    grade           CHAR(1),                           -- TODO Tanvi: confirm SFA grade source / how it's populated
+    -- cuisine_type: free text, populated by Lancea during data load
+    cuisine_type    VARCHAR(100),
+    -- grade: nullable until SFA data is loaded (dataset 3, optional)
+    grade           CHAR(1),
     is_deleted      TINYINT(1) NOT NULL DEFAULT 0,      -- soft delete only, never hard-delete a stall
     deleted_at      TIMESTAMP NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -44,9 +47,10 @@ CREATE TABLE menu_item (
 
 CREATE TABLE customer (
     customer_id     INT AUTO_INCREMENT PRIMARY KEY,
-    name            VARCHAR(150),                       -- NULL allowed = guest (Kristen's checkout only asks nameless accounts)
+    name            VARCHAR(150),                       -- NULL allowed = guest
     email           VARCHAR(255) UNIQUE,
-    -- TODO Tanvi: confirm with Kristen whether auth (password hash etc.) lives here or is out of scope for the module
+    -- Auth (password hash etc.) is out of scope for this module —
+    -- to confirm with Kristen. No credential storage here for now.
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -60,5 +64,3 @@ CREATE TABLE wallet (
     -- balance must only ever change via ledger_entry inserts (Lideon) — never a manual UPDATE
 ) ENGINE=InnoDB;
 
--- TODO Tanvi: sit with Wileen once to confirm these column names (stall_id,
--- customer_id, ...) are exactly what Mongo documents will reference.
