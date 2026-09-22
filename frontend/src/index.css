@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #f7f2e7;
+  --color-surface: #fffdf8;
+  --color-ink: #17251d;
+  --color-muted: #6f776f;
+  --color-forest: #234b35;
+  --color-forest-dark: #193127;
+  --color-lime: #ddf06b;
+  --color-coral: #f05a3c;
+  --color-border: #d9ddd3;
+  --color-success: #397a50;
+  --color-amber: #f2b84b;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+section[id] {
+  scroll-margin-top: 99px;
+}
+
+button:not(:disabled),
+a,
+[role="button"],
+[role="switch"],
+input[type="submit"],
+input[type="button"] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.25s ease-out;
+}
