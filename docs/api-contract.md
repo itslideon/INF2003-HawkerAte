@@ -38,3 +38,25 @@ GET  /investor/rank              (read-only, many centres/stalls)
 ```
 
 TODO Lideon: confirm exact response shapes as each endpoint ships.
+
+## Reviews — DRAFT, not built yet
+
+Wileen has pushed `nosql/` (`reviews` collection, string `stall_id` — see
+`nosql/setup_collections.py` and `nosql/aggregations/`), but there's no
+HTTP endpoint over it yet, only Python/mongosh scripts that talk to Mongo
+directly. The frontend needs one to replace the stall rating it currently
+shows (`frontend/src/components/StallRating.jsx`, wired to the shape
+below via `frontend/src/lib/reviewsApi.js`) — right now that component
+gets `null` from every request and renders nothing.
+
+Proposed shape, for Lideon to confirm/adjust when he builds it:
+
+```
+GET /stalls/:id/reviews
+  -> { average_rating, review_count, reviews: [{ customer_id, rating, comment, created_at }] }
+```
+
+`average_rating`/`review_count` come from aggregating non-deleted
+`reviews` docs for that `stall_id` (see `nosql/aggregations/by_stall.js`
+for the aggregation pattern, applied to `reviews` instead of
+`payment_events`).
