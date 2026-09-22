@@ -16,3 +16,16 @@
 
 Raw downloads go in `etl/raw/` (gitignored — note the download date in
 `etl/raw/README.md` instead of committing the files).
+
+## Order-id handoff (Lideon → Wileen)
+
+`generate_orders.py` must append one row per created order to
+`etl/raw/generated_orders.csv` (gitignored, create the file/header if it
+doesn't exist yet) with columns:
+
+```
+order_id,stall_id,customer_id,amount,method
+```
+
+`generate_mongo_events.py` reads that file and inserts one
+`payment_events` doc per row.
