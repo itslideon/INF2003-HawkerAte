@@ -6,8 +6,8 @@
 
 -- Valid inserts — these should all succeed
 INSERT INTO hawker_centre (name, address) VALUES ('Maxwell Food Centre', '1 Kadayanallur St');
-INSERT INTO stall (centre_id, name, cuisine_type, grade) VALUES (1, 'Tian Tian Chicken Rice', 'Chinese', 'A');
-INSERT INTO menu_item (stall_id, name, price) VALUES (1, 'Chicken Rice', 5.50);
+INSERT INTO stall (centre_id, name, cuisine_type, grade) VALUES (1, 'Rice', 'Chinese', 'A');
+INSERT INTO menu_item (stall_id, name, price) VALUES (1, 'Fried Rice', 5.50);
 INSERT INTO customer (name, email) VALUES ('Test User', 'test@example.com');
 INSERT INTO wallet (customer_id, balance) VALUES (1, 20.00);
 
