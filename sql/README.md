@@ -25,6 +25,23 @@ for f in sql/views/*.sql; do mysql -u root -p hawkerate < "$f"; done
 mysql -u root -p hawkerate < sql/indexes.sql
 ```
 
+## Sanity check — `schema/test_inserts.sql`
+
+After running `schema/01_core.sql`, use `schema/test_inserts.sql` to confirm the tables accept valid data and reject invalid data.
+
+Via CLI:
+
+```bash
+mysql -u root -p hawkerate < sql/schema/test_inserts.sql
+```
+
+What it does:
+
+- Inserts one valid row into `hawker_centre`, `stall`, `menu_item`, `customer`, and `wallet`, then `SELECT`s from `stall`, `menu_item`, and `wallet` 
+- Includes a block of invalid inserts (bad `grade`, negative `price`, negative `balance`) commented out at the bottom. Uncomment and run **one at a time** to confirm each constraint violation is rejected — don't run them all together, since the earlier statements would stop the script once one fails.
+
+Since it inserts real rows, only run it against a scratch/dev database, and re-create the schema (or delete the test rows) before seeding real data.
+
 ## Rules
 
 - `ENGINE=InnoDB` everywhere
