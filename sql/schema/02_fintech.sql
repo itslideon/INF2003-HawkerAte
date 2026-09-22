@@ -1,8 +1,10 @@
 -- =====================================================
 -- 02_fintech.sql
--- Owner: LIDEON
 -- orders, order_line, payment, ledger_entry
 -- Depends on 01_core.sql (stall, menu_item, customer, wallet)
+--
+-- Table names, INT PKs, and FK names are set for the ER diagram.
+-- Checkout API comes later; drawing the ER doesn't need it.
 -- =====================================================
 
 CREATE TABLE orders (

@@ -1,8 +1,3 @@
-# User manual — Owners: Kristen (UI) + Tanvi (MariaDB) + Wileen (Mongo)
+# User manual
 
-Sections to fill in during Iter 4:
-
-- `ui.md` — Kristen: which login is which role, how to click through
-  diner/owner/admin/investor
-- `mariadb.md` — Tanvi: how to stand up the SQL side from a clean clone
-- `mongo.md` — Wileen: how to stand up Mongo, run the speed test
+How to run the system from a clean clone: UI, MariaDB, and Mongo. We’ll fill this in before the final hand-in.

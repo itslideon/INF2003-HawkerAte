@@ -1,13 +1,9 @@
-# HawkerAte — video script (≤10 min, all 5 names on screen)
+# Video outline
 
-| # | Speaker | Topic | Target time |
-|---|---------|-------|-------------|
-| 1 | Lancea  | Story, datasets, audiences | |
-| 2 | Tanvi   | ER, tables, constraints | |
-| 3 | Lideon  | Pay, refund, split | |
-| 4 | Wileen  | Mongo + speed test | |
-| 5 | Kristen | Click through all 4 roles (investor 30–45s) | |
+Target length: under 10 minutes, all five of us on screen.
 
-Hard stop: 10:00 total — penalty if over.
-
-Draft during Iter 3, record in Iter 4.
+1. Lancea — what the app is, data sources, who it’s for
+2. Tanvi — ER diagram, tables, constraints
+3. Lideon — pay, refund, split
+4. Wileen — Mongo and the speed comparison
+5. Kristen — walk through the UI (investor view kept short)

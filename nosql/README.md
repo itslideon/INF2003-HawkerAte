@@ -1,55 +1,46 @@
-# MongoDB setup — Owner: WILEEN (works with Tanvi on shared MariaDB IDs)
+# MongoDB
 
-DB name: **`hawkerate`** — pick once, never rename.
+Database name: **`hawkerate`**.
 
-## Start Mongo
+We’re using MongoDB Atlas (free tier). Local `mongod` also works.
 
-Using **MongoDB Atlas** (free tier — what this project uses):
+### Atlas
 
-1. Sign up / log in at mongodb.com, create a free (M0) cluster.
-2. Database Access → add a user + password.
-3. Network Access → allow your current IP (or `0.0.0.0/0` for a class
-   project shared across teammates' laptops).
-4. Get the connection string (Atlas UI → Connect → Drivers), then copy
-   `.env.example` to `.env` at the repo root and set:
-   ```
-   MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
-   MONGO_DB=hawkerate
-   ```
+1. Create a free M0 cluster at mongodb.com.
+2. Add a database user.
+3. Allow your IP under Network Access (or `0.0.0.0/0` if everyone’s laptops need it).
+4. Copy `.env.example` to `.env` at the repo root:
 
-Or run it locally instead:
+```
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
+MONGO_DB=hawkerate
+```
+
+Keep `.env` off git.
+
+### Local
 
 ```bash
 mongod --dbpath <your data dir>
-# or: brew services start mongodb-community
-# or: docker run -d -p 27017:27017 --name hawkerate-mongo mongo
 ```
-(then `MONGO_URI=mongodb://localhost:27017` in `.env`)
 
-## Python setup
+Then `MONGO_URI=mongodb://localhost:27017` in `.env`.
+
+## Python scripts
 
 ```bash
 pip install -r nosql/requirements.txt
-python nosql/db.py               # sanity check: prints the connection + collection list
-python nosql/setup_collections.py  # creates collections with $jsonSchema validators + indexes
-python nosql/seed.py               # inserts the example docs from nosql/models/
+python nosql/db.py
+python nosql/setup_collections.py
+python nosql/seed.py
 ```
+
+`setup_collections.py` creates the collections with validators and indexes. `seed.py` loads the example docs under `nosql/models/`.
 
 ## Collections
 
-- `payment_events` — one doc per pay/refund event, inserted **after** the
-  matching MariaDB transaction commits. PayNow/card/cash have different
-  fields (see `models/payment_events.example.json`).
-- `reviews` — soft-delete (`is_deleted`), searchable by stall.
-- `investor_watchlist` (optional).
+- `payment_events` — one document per pay or refund, written after the matching MariaDB commit. PayNow / card / cash don’t all have the same fields (see the example JSON).
+- `reviews` — stall ratings; soft-deleted with `is_deleted`.
+- `investor_watchlist` — optional.
 
-## Rules
-
-- Mongo collections are **not** part of the "9 SQL table" minimum — they're
-  the separate NoSQL half of the project.
-- Insert `payment_events` only after the SQL commit succeeds.
-- Refunds are **appended** as new events, never rewritten or deleted
-  (append-only, same principle as the SQL ledger).
-- Do not duplicate the whole SQL ledger here — just the event log.
-- Keep field names (`stall_id`, `order_id`, `customer_id`, ...) exactly in
-  sync with the MariaDB column names Tanvi/Lideon use — agree in writing.
+This is the NoSQL side of the project, not a copy of the SQL ledger. Field names like `stall_id` / `order_id` match the MariaDB columns, stored as strings (`"1"` for id `1`).

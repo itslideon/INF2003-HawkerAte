@@ -8,6 +8,10 @@ __pycache__/
 .env
 .env.local
 
+# local-only — never commit
+INF2003_project_description.pdf
+DATABASEPROJ.md
+
 # large / official raw downloads — note the download date in etl/raw/README.md instead
 etl/raw/*
 !etl/raw/README.md

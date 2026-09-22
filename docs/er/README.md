@@ -1,8 +1,5 @@
-# ER diagram — Owner: TANVI (Lancea helps walk through it in the demo)
+# ER diagram
 
-Drop the ER diagram image/file here (e.g. `er.png`, `er.drawio`,
-`er.pdf`) before the Iter 1 demo (3 Oct).
+Put the diagram in this folder (`er.png`, Draw.io, etc.).
 
-Must show: `hawker_centre` 1–M `stall`; `stall` 1–M `menu_item`;
-`customer` 1–1 `wallet`; and empty boxes for Lideon's `orders` /
-`payment` / `ledger_entry` (don't invent those columns here).
+It should show hawker centres to stalls to menu items, customers to wallets, and the order / payment / ledger tables from `sql/schema/02_fintech.sql`.

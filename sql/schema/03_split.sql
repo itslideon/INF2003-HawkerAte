@@ -1,7 +1,6 @@
 -- =====================================================
 -- 03_split.sql
--- Owner: LIDEON — Iter 3 (friend split, 3 diners demo)
--- dining_session, session_member
+-- dining_session, session_member (group bill split)
 -- Depends on 02_fintech.sql (orders) and 01_core.sql (customer)
 -- =====================================================
 

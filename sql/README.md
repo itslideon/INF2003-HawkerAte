@@ -1,53 +1,38 @@
-# SQL setup (MariaDB, InnoDB)
+# MariaDB
 
-## Create the database
+Database name: `hawkerate`.
 
 ```sql
 CREATE DATABASE IF NOT EXISTS hawkerate CHARACTER SET utf8mb4;
 USE hawkerate;
 ```
 
-## Run order — always in this order
+Run the scripts in this order — later files assume earlier tables exist:
 
-1. `schema/01_core.sql`    (Tanvi)
-2. `schema/02_fintech.sql` (Lideon)
-3. `schema/03_split.sql`   (Lideon, Iter 3+)
-4. `views/*.sql`           (Lancea)
-5. `indexes.sql`           (Lancea)
-
-Via CLI:
+1. `schema/01_core.sql` — centres, stalls, menu, customers, wallets
+2. `schema/02_fintech.sql` — orders, lines, payments, ledger
+3. `schema/03_split.sql` — group bill split (used later)
+4. `views/*.sql`
+5. `indexes.sql`
 
 ```bash
 mysql -u root -p hawkerate < sql/schema/01_core.sql
 mysql -u root -p hawkerate < sql/schema/02_fintech.sql
 mysql -u root -p hawkerate < sql/schema/03_split.sql
-for f in sql/views/*.sql; do mysql -u root -p hawkerate < "$f"; done
+mysql -u root -p hawkerate < sql/views/v_daily_settlement.sql
 mysql -u root -p hawkerate < sql/indexes.sql
 ```
 
-## Sanity check — `schema/test_inserts.sql`
+## `schema/test_inserts.sql`
 
-After running `schema/01_core.sql`, use `schema/test_inserts.sql` to confirm the tables accept valid data and reject invalid data.
+Optional. After `01_core.sql`, this drops in one centre / stall / dish / customer / wallet so you can see the tables working. It also has a few commented-out inserts that should fail (bad grade, negative price, etc.). Uncomment one at a time if you want to check the constraints.
 
-Via CLI:
+Only run that on a throwaway database — it writes real rows.
 
-```bash
-mysql -u root -p hawkerate < sql/schema/test_inserts.sql
-```
+## Conventions we stuck to
 
-What it does:
-
-- Inserts one valid row into `hawker_centre`, `stall`, `menu_item`, `customer`, and `wallet`, then `SELECT`s from `stall`, `menu_item`, and `wallet` 
-- Includes a block of invalid inserts (bad `grade`, negative `price`, negative `balance`) commented out at the bottom. Uncomment and run **one at a time** to confirm each constraint violation is rejected — don't run them all together, since the earlier statements would stop the script once one fails.
-
-Since it inserts real rows, only run it against a scratch/dev database, and re-create the schema (or delete the test rows) before seeding real data.
-
-## Rules
-
-- `ENGINE=InnoDB` everywhere
-- Money columns: `DECIMAL(10,2)`
-- IDs: `INT AUTO_INCREMENT`
-- One pay = one SQL `TRANSACTION` (`BEGIN ... COMMIT`)
-- Never set `wallet.balance` by hand — only via `ledger_entry`
-- Soft-delete stalls (`is_deleted` / `deleted_at`), never hard-delete
-- Never `DELETE` a `ledger_entry` row
+- InnoDB, money as `DECIMAL(10,2)`, ids as `INT AUTO_INCREMENT`
+- One payment = one `START TRANSACTION … COMMIT`
+- Don’t update `wallet.balance` by itself in the live app; go through `ledger_entry`
+- Don’t delete ledger rows; a refund is a new reversing row
+- Stalls are soft-deleted (`is_deleted` / `deleted_at`)

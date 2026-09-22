@@ -1,9 +1,3 @@
-# Complex / nested queries — Owner: LANCEA
+# Queries
 
-Extra-credit "complex SQL" lives here as standalone `.sql` files, e.g.:
-
-- `stalls_below_centre_avg_ticket.sql` — stalls whose avg ticket is below
-  their centre's average (nested query / subquery)
-- `owner_kpis.sql`, `admin_kpis.sql`, `investor_kpis.sql`
-
-Iter 2–3 build these, Iter 4 is polish only.
+Standalone SQL we use for the heavier reporting (nested queries and the like), e.g. stalls whose average ticket sits below their centre’s average (`stalls_below_centre_avg_ticket.sql`).
