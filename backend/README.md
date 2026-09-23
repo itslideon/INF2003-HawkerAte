@@ -1,23 +1,34 @@
 # API
 
-Small Flask app that sits between the UI and MariaDB. Right now it only serves reads so the browse pages can use real centre / stall / menu rows.
+Flask app between the UI, MariaDB, and Mongo.
+
+Browse (MariaDB):
 
 - `GET /health`
 - `GET /centres`
 - `GET /centres/<id>/stalls`
 - `GET /stalls/<id>/menu`
 
-Checkout (`POST /orders/pay`) isn’t wired yet.
+Reviews (Mongo):
+
+- `GET /stalls/<id>/reviews`
+- `POST /reviews`
+
+Checkout (MariaDB transaction, then a Mongo `payment_events` doc):
+
+- `POST /orders/pay`
+
+Ids in Mongo are strings of the MariaDB ints (`1` → `"1"`).
 
 ## Run it
 
-Copy `.env.example` at the repo root to `.env` and set the MariaDB password. Apply `sql/schema/01_core.sql` first (and `sql/schema/test_inserts.sql` if you want a couple of sample rows).
+Copy `.env.example` at the repo root to `.env`. Fill in MariaDB and `MONGO_URI` / `MONGO_DB`. Don’t commit `.env`.
 
-From the repo root:
+Apply `sql/schema/01_core.sql` and `sql/schema/02_fintech.sql` (plus `test_inserts.sql` if you want sample rows).
 
 ```bash
 pip install -r backend/requirements.txt
 python backend/app.py
 ```
 
-It listens on http://localhost:3000. Point the frontend at that with `VITE_API_BASE_URL` in `frontend/.env`.
+http://localhost:3000 — point the frontend at that with `VITE_API_BASE_URL` in `frontend/.env`.

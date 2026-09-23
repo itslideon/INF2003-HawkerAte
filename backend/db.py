@@ -1,4 +1,4 @@
-"""MariaDB connection — reads the repo-root .env (same as nosql/db.py)."""
+"""MariaDB connection using DB_* values from the repo-root .env."""
 
 import os
 from pathlib import Path

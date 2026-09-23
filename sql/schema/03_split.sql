@@ -1,7 +1,8 @@
 -- =====================================================
 -- 03_split.sql
--- dining_session, session_member (group bill split)
--- Depends on 02_fintech.sql (orders) and 01_core.sql (customer)
+-- Group bill split. Run after 01_core.sql and 02_fintech.sql.
+-- share_amount is the amount each person owes; they pay through
+-- the normal checkout path.
 -- =====================================================
 
 CREATE TABLE dining_session (
@@ -21,8 +22,3 @@ CREATE TABLE session_member (
     CONSTRAINT fk_session_member_customer FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
     CONSTRAINT chk_session_member_share CHECK (share_amount > 0)
 ) ENGINE=InnoDB;
-
--- TODO Lideon (Iter 3): split-calculation logic (equal / by-item / custom)
--- lives in application code — each session_member row just records the
--- final share_amount once it's computed, and each member pays their own
--- share through the normal pay path.
