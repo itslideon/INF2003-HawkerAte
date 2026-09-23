@@ -8,7 +8,7 @@
 
 db.reviews.createIndex({ comment: "text" });
 
-const STALL_ID = "17";
+const STALL_ID = "1";
 const SEARCH_TERM = "queue";
 
 db.reviews.find(

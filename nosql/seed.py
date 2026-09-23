@@ -6,6 +6,9 @@ Inserts the example docs from nosql/models/*.example.json (with real
 types/ObjectIds instead of the placeholder strings) so there's data to
 run the aggregations against. Safe to re-run — clears and re-inserts.
 
+IDs match Tanvi's test_inserts.sql: centre_id=1, stall_id=1,
+customer_id=1 (see sql/test_inserts.sql).
+
     python nosql/setup_collections.py   # once, to create collections/indexes
     python nosql/seed.py
 """
@@ -23,10 +26,10 @@ def seed_payment_events(db) -> None:
     db.payment_events.delete_many({})
 
     payment = db.payment_events.insert_one({
-        "order_id": "1042",
-        "stall_id": "17",
-        "customer_id": "88",
-        "amount": 6.50,
+        "order_id": "1",
+        "stall_id": "1",
+        "customer_id": "1",
+        "amount": 5.50,
         "method": "paynow",
         "event_type": "payment",
         "paynow_ref": "PN-20261004-0007",
@@ -35,29 +38,20 @@ def seed_payment_events(db) -> None:
 
     db.payment_events.insert_many([
         {
-            "order_id": "1043",
-            "stall_id": "17",
-            "customer_id": "41",
-            "amount": 4.20,
+            "order_id": "2",
+            "stall_id": "1",
+            "customer_id": "1",
+            "amount": 5.50,
             "method": "card",
             "event_type": "payment",
             "card_last4": "4242",
             "created_at": dt("2026-10-04T12:33:10Z"),
         },
         {
-            "order_id": "1044",
-            "stall_id": "9",
-            "customer_id": "12",
-            "amount": 3.80,
-            "method": "cash",
-            "event_type": "payment",
-            "created_at": dt("2026-10-04T12:40:22Z"),
-        },
-        {
-            "order_id": "1042",
-            "stall_id": "17",
-            "customer_id": "88",
-            "amount": -6.50,
+            "order_id": "1",
+            "stall_id": "1",
+            "customer_id": "1",
+            "amount": -5.50,
             "method": "paynow",
             "event_type": "refund",
             "reversed_event_id": payment.inserted_id,
@@ -70,10 +64,10 @@ def seed_payment_events(db) -> None:
 def seed_reviews(db) -> None:
     db.reviews.delete_many({})
     db.reviews.insert_one({
-        "stall_id": "17",
-        "customer_id": "88",
+        "stall_id": "1",
+        "customer_id": "1",
         "rating": 4,
-        "comment": "Good char kway teow, a bit long queue at lunch",
+        "comment": "Good fried rice, a bit long queue at lunch",
         "is_deleted": False,
         "created_at": dt("2026-10-10T08:15:00Z"),
     })
@@ -83,9 +77,9 @@ def seed_reviews(db) -> None:
 def seed_investor_watchlist(db) -> None:
     db.investor_watchlist.delete_many({})
     db.investor_watchlist.insert_one({
-        "customer_id": "5",
-        "watched_centre_ids": ["1", "4", "9"],
-        "watched_stall_ids": [],
+        "customer_id": "1",
+        "watched_centre_ids": ["1"],
+        "watched_stall_ids": ["1"],
         "created_at": dt("2026-10-20T00:00:00Z"),
     })
     print(f"seeded {db.investor_watchlist.count_documents({})} investor_watchlist")
