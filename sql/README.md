@@ -17,11 +17,16 @@ Run the scripts in this order — later files assume earlier tables exist:
 
 ```bash
 mysql -u root -p hawkerate < sql/schema/01_core.sql
+mysql -u root -p hawkerate < sql/schema/test_inserts.sql
 mysql -u root -p hawkerate < sql/schema/02_fintech.sql
 mysql -u root -p hawkerate < sql/schema/03_split.sql
 mysql -u root -p hawkerate < sql/views/v_daily_settlement.sql
 mysql -u root -p hawkerate < sql/indexes.sql
 ```
+
+Checkout (`POST /orders/pay`) needs `01_core.sql` **and** `02_fintech.sql`. `test_inserts.sql` is optional and only after `01_core.sql`. Views/indexes can wait until those files are filled in.
+
+On Windows, if `mysqld` is not a service, start it with a quoted `--defaults-file=` (paths with spaces break if unquoted). Empty root password: omit `-p` or pass an empty one, matching `.env` `DB_PASSWORD`.
 
 ## `schema/test_inserts.sql`
 

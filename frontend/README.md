@@ -15,7 +15,7 @@ You can also `cd frontend` and run `npm install` / `npm run dev` as usual.
 
 `npm --prefix frontend run build` writes a production bundle to `frontend/dist/`. `npm --prefix frontend run preview` serves that bundle.
 
-Until the API is running, the UI uses mock dishes and local orders. To hit the real API, add `frontend/.env`:
+Until the API is running, the UI uses mock dishes and local orders. Browse, reviews, and checkout talk to Flask when you set `frontend/.env`:
 
 ```
 VITE_API_BASE_URL=http://localhost:3000

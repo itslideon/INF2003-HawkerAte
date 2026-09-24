@@ -27,13 +27,23 @@ Repo: https://github.com/itslideon/INF2003-HawkerAte
 
 ## How to run
 
-1. Create the MariaDB database `hawkerate` and run the scripts in `sql/` (see `sql/README.md`).
-2. Set up MongoDB (`nosql/README.md`). Database name is `hawkerate`.
-3. Copy `.env.example` to `.env` and fill in local credentials. Don’t commit `.env`.
-4. Start the API: `pip install -r backend/requirements.txt` then `python backend/app.py`
-5. Start the UI: `npm --prefix frontend install` then `npm --prefix frontend run dev`
+1. Install MariaDB and create database `hawkerate`. Apply schema in order (`sql/README.md`): `01_core.sql`, then `02_fintech.sql`. Optional: `test_inserts.sql` for sample rows, `03_split.sql` when working on group bills.
+2. MongoDB Atlas (or local `mongod`): Database Access user + Network Access for your IP (`nosql/README.md`). Database name `hawkerate`.
+3. Copy `.env.example` → `.env` at the repo root. Fill MariaDB `DB_*` and Atlas `MONGO_URI` / `MONGO_DB`. No space after `=`. Don’t commit `.env`.
+4. API: `pip install -r backend/requirements.txt` then `python backend/app.py` → http://localhost:3000  
+   Check `GET /health` — both `mariadb` and `mongo` should be `"up"`.
+5. UI: `npm --prefix frontend install` then `npm --prefix frontend run dev` → http://localhost:5173  
+   Set `VITE_API_BASE_URL=http://localhost:3000` in `frontend/.env`.
 
-More detail is in each folder’s README.
+Folder READMEs have the extra detail (Windows MariaDB, PowerShell `curl`, Atlas).
+
+## Status
+
+**Working in the API:** browse centres/stalls/menu, stall reviews (Mongo), checkout `POST /orders/pay` (one MariaDB transaction, then a `payment_events` document).
+
+**Not built yet:** refunds, dining-session split HTTP APIs, owner/admin/investor endpoints, ETL order generator (`etl/scripts/generate_orders.py` is still a stub).
+
+Ids: MariaDB `INT AUTO_INCREMENT`; Mongo stores the same values as strings (`"1"`).
 
 ## Design notes
 
