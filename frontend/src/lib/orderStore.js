@@ -1,6 +1,5 @@
-// stand-in for POST /orders/pay until that's live — orders just sit in localStorage
-// for now. swap the two functions below for real fetch calls when it ships, everything
-// else that calls them stays the same. field names already match Lideon's schema.
+// local order history (localStorage) — POST /orders/pay is the source of truth for the
+// order itself, this just remembers it per signed-in user so the Account page can list it.
 
 const ORDERS_KEY_PREFIX = 'hawkerate.orders.'
 
@@ -20,11 +19,6 @@ export function paymentMethodLabel(value) {
 // yet (orders.status is only pending/paid/cancelled/refunded), so until Lideon adds one the
 // order is marked ready locally after this delay. short on purpose so the demo shows it.
 export const MOCK_READY_DELAY_MS = 20_000
-
-export function generateOrderId() {
-  const random = Math.random().toString(36).slice(2, 6).toUpperCase()
-  return `HA-${Date.now().toString(36).toUpperCase()}${random}`
-}
 
 export function buildOrderLines(orderId, basketEntries) {
   return basketEntries.map(({ dish, quantity }, index) => ({

@@ -17,3 +17,22 @@ export async function apiGet(path) {
     return null
   }
 }
+
+// Writes need to tell the user *why* something failed (e.g. "insufficient wallet
+// balance"), so unlike apiGet this resolves to { ok, data, error } instead of null.
+export async function apiPost(path, body) {
+  if (!BASE_URL) return { ok: false, error: 'API not configured (set VITE_API_BASE_URL)' }
+
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) return { ok: false, error: data?.error ?? `Request failed (${res.status})` }
+    return { ok: true, data }
+  } catch {
+    return { ok: false, error: "Can't reach the API — is backend/app.py running?" }
+  }
+}

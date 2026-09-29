@@ -6,36 +6,59 @@ import Button from '../components/Button.jsx'
 import OrderConfirmation from '../components/OrderConfirmation.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
+import { useMenu } from '../context/MenuContext.jsx'
 import { useOrderTracker, requestNotificationPermission } from '../context/OrderTrackerContext.jsx'
+import { payOrder } from '../lib/orderApi.js'
 import {
   PAYMENT_METHODS,
   buildOrderLines,
-  generateOrderId,
   paymentMethodLabel,
   saveOrderForUser,
 } from '../lib/orderStore.js'
-import { stallId, stallName } from '../data/dishes.js'
+
+// Stopgap: the app's login is fake (customer_id = email) but POST /orders/pay needs an
+// int customer_id with a wallet in MariaDB. 1 is the seeded Test User in
+// sql/schema/test_inserts.sql. Replace with the real id once signup exists.
+const DEMO_CUSTOMER_ID = 1
 
 export default function CheckoutPage() {
   const { user } = useAuth()
+  const { stall } = useMenu()
   const { basketEntries, subtotal, itemCount, clearBasket } = useCart()
   const navigate = useNavigate()
   const { statuses, trackOrder } = useOrderTracker()
   const [method, setMethod] = useState(null)
   const [placedOrder, setPlacedOrder] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
 
-  const placeOrder = () => {
-    if (!method) return
-    const newOrderId = generateOrderId()
+  const placeOrder = async () => {
+    if (!method || submitting) return
+    setSubmitting(true)
+    setError(null)
+
+    const result = await payOrder({
+      customerId: DEMO_CUSTOMER_ID,
+      stallId: stall.stall_id,
+      basketEntries,
+      method,
+    })
+    setSubmitting(false)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+
+    const { order_id: newOrderId, total_amount: serverTotal } = result.data
     const order = {
       order_id: newOrderId,
-      stall_id: stallId,
-      stall_name: stallName,
+      stall_id: stall.stall_id,
+      stall_name: stall.name,
       customer_id: user?.customer_id ?? null,
       items: buildOrderLines(newOrderId, basketEntries),
-      total_amount: subtotal,
+      total_amount: serverTotal,
       method,
-      status: 'preparing',
+      status: 'preparing', // frontend-only until the API has a "ready" state
       placed_at: new Date().toISOString(),
     }
 
@@ -82,7 +105,7 @@ export default function CheckoutPage() {
         <Reveal className="flex w-full flex-col items-start gap-6 lg:w-[430px] lg:shrink-0">
           <div className="flex w-full flex-col items-start gap-3">
             <p className="text-xs font-bold uppercase text-coral">Order summary</p>
-            <h1 className="text-[32px] font-extrabold leading-[1.1] text-ink sm:text-[46px] sm:leading-[1.05]">Dine-in at {stallName}</h1>
+            <h1 className="text-[32px] font-extrabold leading-[1.1] text-ink sm:text-[46px] sm:leading-[1.05]">Dine-in at {stall.name}</h1>
             <p className="text-base leading-[1.5] text-muted">
               Enjoy your meal at the hawker centre — no delivery needed. Show your order ID at the counter
               when it's ready.
@@ -139,8 +162,22 @@ export default function CheckoutPage() {
               </label>
             ))}
           </fieldset>
-          <Button variant="dark" onClick={placeOrder} disabled={!method} className="w-full justify-center">
-            {method ? `Place order · ${paymentMethodLabel(method)}` : 'Choose a payment method'}
+          {error && (
+            <p role="alert" className="w-full rounded-xl bg-coral/10 p-3 text-sm font-semibold text-coral">
+              {error}
+            </p>
+          )}
+          <Button
+            variant="dark"
+            onClick={placeOrder}
+            disabled={!method || submitting}
+            className="w-full justify-center"
+          >
+            {submitting
+              ? 'Placing order…'
+              : method
+                ? `Place order · ${paymentMethodLabel(method)}`
+                : 'Choose a payment method'}
           </Button>
         </Reveal>
       </div>

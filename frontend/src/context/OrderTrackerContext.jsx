@@ -90,7 +90,9 @@ export function OrderTrackerProvider({ children }) {
   const getOrder = useCallback(
     (orderId) =>
       sessionOrders[orderId] ??
-      (user ? getOrdersForUser(user.customer_id).find((order) => order.order_id === orderId) : undefined),
+      (user
+        ? getOrdersForUser(user.customer_id).find((order) => String(order.order_id) === String(orderId))
+        : undefined),
     [sessionOrders, user],
   )
 
