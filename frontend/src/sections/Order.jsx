@@ -3,8 +3,23 @@ import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { useCart } from '../context/CartContext.jsx'
+import { useMenu } from '../context/MenuContext.jsx'
 import StallRating from '../components/StallRating.jsx'
-import { dishes, filters, stallId, stallName } from '../data/dishes.js'
+
+// Real menu_item rows have no photo (GET /stalls/:id/menu only sends menu_item_id,
+// name, price, is_available — see docs/api-contract.md), so dishes get a plain
+// placeholder instead of a stock photo that would misrepresent a real dish.
+function DishThumb({ className = '' }) {
+  return (
+    <div className={`flex shrink-0 items-center justify-center rounded-lg bg-cream text-3xl ${className}`}>
+      🍽️
+    </div>
+  )
+}
+
+// Derived from real fields only (price, is_available) — the mock's
+// Popular/Chicken rice/Halal tags had no equivalent in the real menu_item row.
+const FILTERS = ['All', 'Under $10']
 
 function GridIcon(props) {
   return (
@@ -27,7 +42,11 @@ function ListIcon(props) {
   )
 }
 
-function QuantityStepper({ quantity, onAdd, onRemove, dishName, maxQuantity }) {
+function QuantityStepper({ quantity, onAdd, onRemove, dishName, maxQuantity, disabled }) {
+  if (disabled) {
+    return <span className="text-xs font-bold uppercase text-muted">Sold out</span>
+  }
+
   if (quantity === 0) {
     return (
       <button
@@ -72,17 +91,49 @@ function QuantityStepper({ quantity, onAdd, onRemove, dishName, maxQuantity }) {
   )
 }
 
+function StatusMessage({ title, body }) {
+  return (
+    <section id="order" className="flex w-full flex-col items-start bg-cream px-4 py-8 sm:px-8 lg:px-12">
+      <Reveal className="flex w-full flex-col items-start gap-1 rounded-2xl bg-surface p-6">
+        <p className="text-sm font-bold text-ink">{title}</p>
+        <p className="text-xs text-muted">{body}</p>
+      </Reveal>
+    </section>
+  )
+}
+
 export default function Order() {
-  const [activeFilter, setActiveFilter] = useState(filters[0])
+  const { status, stall, dishes } = useMenu()
+  const [activeFilter, setActiveFilter] = useState(FILTERS[0])
+  const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState('grid')
   const navigate = useNavigate()
   const { basket, addToBasket, removeFromBasket, basketEntries, itemCount, subtotal, maxQuantityPerDish } =
     useCart()
 
-  const visibleDishes = useMemo(
-    () => dishes.filter((dish) => dish.tags.includes(activeFilter)),
-    [activeFilter],
-  )
+  const visibleDishes = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    return dishes
+      .filter((dish) => activeFilter !== 'Under $10' || dish.price < 10)
+      .filter((dish) => !term || dish.name.toLowerCase().includes(term))
+  }, [dishes, activeFilter, search])
+
+  if (status === 'loading') {
+    return <StatusMessage title="Loading the menu…" body="Fetching live stalls and dishes." />
+  }
+
+  if (status === 'unavailable') {
+    return (
+      <StatusMessage
+        title="Menu unavailable right now"
+        body="Can't reach the API — make sure backend/app.py is running and VITE_API_BASE_URL is set."
+      />
+    )
+  }
+
+  if (status === 'empty' || !stall) {
+    return <StatusMessage title="No stalls or dishes yet" body="Check back once the centres/stalls are seeded." />
+  }
 
   return (
     <section id="order" className="flex w-full flex-col items-start bg-cream">
@@ -92,14 +143,17 @@ export default function Order() {
             <div className="flex flex-col items-start gap-1">
               <h2 className="text-[28px] font-extrabold text-ink sm:text-[34px]">What are you craving?</h2>
               <p className="text-sm text-muted">
-                Dine-in at {stallName} • ready in 15–20 min
-                <StallRating stallId={stallId} className="ml-2 font-semibold text-ink" />
+                Dine-in at {stall.name}
+                {stall.cuisine_type ? ` • ${stall.cuisine_type}` : ''}
+                <StallRating stallId={stall.stall_id} className="ml-2 font-semibold text-ink" />
               </p>
             </div>
             <div className="w-full rounded-full bg-surface px-[15px] py-[11px] sm:w-60">
               <input
                 type="search"
-                placeholder="⌕ Search dishes or stalls"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="⌕ Search dishes"
                 className="w-full bg-transparent text-[13px] text-muted outline-none"
               />
             </div>
@@ -107,7 +161,7 @@ export default function Order() {
 
           <Reveal delay={100} className="flex w-full flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-start gap-2.5">
-              {filters.map((filter) => (
+              {FILTERS.map((filter) => (
                 <button
                   key={filter}
                   type="button"
@@ -149,8 +203,8 @@ export default function Order() {
 
           {visibleDishes.length === 0 ? (
             <Reveal className="flex w-full flex-col items-start gap-1 rounded-2xl bg-surface p-6">
-              <p className="text-sm font-bold text-ink">No dishes under "{activeFilter}" yet</p>
-              <p className="text-xs text-muted">Try a different filter, or check back soon.</p>
+              <p className="text-sm font-bold text-ink">No dishes match</p>
+              <p className="text-xs text-muted">Try a different search or filter.</p>
             </Reveal>
           ) : viewMode === 'grid' ? (
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -160,9 +214,8 @@ export default function Order() {
                   delay={index * 100}
                   className="flex flex-col items-start gap-2.5 rounded-2xl bg-surface p-2.5 transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <img src={dish.image} alt={dish.name} className="h-[178px] w-full rounded-lg object-cover" />
+                  <DishThumb className="h-[178px] w-full" />
                   <p className="text-[15px] font-bold text-ink">{dish.name}</p>
-                  <p className="text-xs text-muted">{dish.subtitle}</p>
                   <div className="flex w-full items-center justify-between">
                     <p className="text-base font-extrabold text-ink">${dish.price.toFixed(2)}</p>
                     <QuantityStepper
@@ -171,6 +224,7 @@ export default function Order() {
                       onRemove={() => removeFromBasket(dish.menu_item_id)}
                       dishName={dish.name}
                       maxQuantity={maxQuantityPerDish}
+                      disabled={!dish.is_available}
                     />
                   </div>
                 </Reveal>
@@ -184,10 +238,9 @@ export default function Order() {
                   delay={index * 80}
                   className="flex w-full items-center gap-4 rounded-2xl bg-surface p-3 transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                 >
-                  <img src={dish.image} alt={dish.name} className="size-[72px] shrink-0 rounded-lg object-cover" />
+                  <DishThumb className="size-[72px]" />
                   <div className="flex flex-1 flex-col items-start gap-0.5">
                     <p className="text-[15px] font-bold text-ink">{dish.name}</p>
-                    <p className="text-xs text-muted">{dish.subtitle}</p>
                   </div>
                   <p className="text-base font-extrabold text-ink">${dish.price.toFixed(2)}</p>
                   <QuantityStepper
@@ -196,6 +249,7 @@ export default function Order() {
                     onRemove={() => removeFromBasket(dish.menu_item_id)}
                     dishName={dish.name}
                     maxQuantity={maxQuantityPerDish}
+                    disabled={!dish.is_available}
                   />
                 </Reveal>
               ))}
@@ -208,7 +262,7 @@ export default function Order() {
           className="flex w-full flex-col items-start gap-[18px] rounded-3xl bg-forest p-6 lg:h-full lg:w-[300px] lg:shrink-0"
         >
           <p className="text-[22px] font-extrabold text-white">Your basket · {itemCount}</p>
-          <p className="text-xs text-lime">{stallName.toUpperCase()}</p>
+          <p className="text-xs text-lime">{stall.name.toUpperCase()}</p>
 
           {basketEntries.map(({ dish, quantity }) => (
             <div key={dish.menu_item_id} className="flex w-full items-center justify-between text-sm text-white">

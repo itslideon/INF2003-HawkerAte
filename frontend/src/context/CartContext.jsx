@@ -1,11 +1,12 @@
 import { createContext, useContext, useMemo, useState } from 'react'
-import { dishes } from '../data/dishes.js'
+import { useMenu } from './MenuContext.jsx'
 
 const CartContext = createContext(null)
 const MAX_QUANTITY_PER_DISH = 20
 
 export function CartProvider({ children }) {
-  const [basket, setBasket] = useState({ 'chicken-rice': 1 })
+  const { dishes } = useMenu()
+  const [basket, setBasket] = useState({})
 
   const addToBasket = (menuItemId) => {
     setBasket((prev) => ({
@@ -32,10 +33,14 @@ export function CartProvider({ children }) {
       Object.entries(basket)
         .filter(([, quantity]) => quantity > 0)
         .map(([menuItemId, quantity]) => ({
-          dish: dishes.find((d) => d.menu_item_id === menuItemId),
+          dish: dishes.find((d) => String(d.menu_item_id) === menuItemId),
           quantity,
-        })),
-    [basket],
+        }))
+        // menu_item_id is a real int from the API now, but object keys are always
+        // strings — String() on both sides keeps the lookup working regardless.
+        // Drops stale entries if the menu ever changes under an open basket.
+        .filter((entry) => entry.dish),
+    [basket, dishes],
   )
 
   const itemCount = basketEntries.reduce((sum, entry) => sum + entry.quantity, 0)
