@@ -1,12 +1,29 @@
 -- v_daily_settlement.sql
--- Owner: LANCEA — Iter 2
+-- Owner: LANCEA — Iter 2 (name frozen in Iter 1)
 -- Purpose: today's sales, avg ticket by cuisine, cash vs PayNow
--- Kristen's owner screen reads from this view directly — no fake totals.
+-- Kristen's owner screen reads from this view — no fake totals.
+--
+-- Planned columns:
+--   stall_id, stall_name, cuisine_type, order_date,
+--   order_count, sales_total, avg_ticket,
+--   cash_sales, paynow_sales, card_sales
+--
+-- Fill the SELECT after generate_orders.py / live pay has rows.
 
--- TODO Lancea:
 -- CREATE OR REPLACE VIEW v_daily_settlement AS
--- SELECT ...
--- FROM orders o
+-- SELECT
+--     s.stall_id,
+--     s.name AS stall_name,
+--     s.cuisine_type,
+--     DATE(o.created_at) AS order_date,
+--     COUNT(o.order_id) AS order_count,
+--     SUM(o.total_amount) AS sales_total,
+--     AVG(o.total_amount) AS avg_ticket,
+--     SUM(CASE WHEN p.method = 'cash' THEN p.amount ELSE 0 END) AS cash_sales,
+--     SUM(CASE WHEN p.method = 'paynow' THEN p.amount ELSE 0 END) AS paynow_sales,
+--     SUM(CASE WHEN p.method = 'card' THEN p.amount ELSE 0 END) AS card_sales
+-- FROM stall s
+-- JOIN orders o ON o.stall_id = s.stall_id AND o.status = 'paid'
 -- JOIN payment p ON p.order_id = o.order_id
--- WHERE DATE(o.created_at) = CURDATE()
--- GROUP BY ...;
+-- WHERE s.is_deleted = 0
+-- GROUP BY s.stall_id, s.name, s.cuisine_type, DATE(o.created_at);

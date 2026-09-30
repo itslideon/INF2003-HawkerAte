@@ -1,16 +1,14 @@
 -- stalls_below_centre_avg_ticket.sql
--- Owner: LANCEA
--- Example "extra credit" complex query: stalls whose avg ticket is below
--- their own centre's average ticket.
+-- Owner: LANCEA — Iter 3 extra-credit nested query (shape frozen in Iter 1)
+-- Stalls whose average ticket is below their own centre's average ticket.
 
--- TODO Lancea:
 -- SELECT s.stall_id, s.name, AVG(o.total_amount) AS stall_avg_ticket
 -- FROM stall s
--- JOIN orders o ON o.stall_id = s.stall_id
--- GROUP BY s.stall_id
+-- JOIN orders o ON o.stall_id = s.stall_id AND o.status = 'paid'
+-- GROUP BY s.stall_id, s.name
 -- HAVING AVG(o.total_amount) < (
 --     SELECT AVG(o2.total_amount)
 --     FROM orders o2
 --     JOIN stall s2 ON s2.stall_id = o2.stall_id
---     WHERE s2.centre_id = s.centre_id
+--     WHERE s2.centre_id = s.centre_id AND o2.status = 'paid'
 -- );

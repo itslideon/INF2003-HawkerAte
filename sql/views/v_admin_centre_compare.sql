@@ -1,8 +1,18 @@
 -- v_admin_centre_compare.sql
--- Owner: LANCEA — Iter 3
+-- Owner: LANCEA — Iter 3 (name frozen in Iter 1)
 -- Purpose: compare stalls within ONE centre — revenue, grade, peak hours,
 -- flags for many refunds or low ratings (agree with Wileen how ratings join)
+--
+-- Planned columns:
+--   centre_id, stall_id, stall_name, grade, cuisine_type,
+--   revenue, avg_ticket, peak_hour, refund_count, avg_rating
 
--- TODO Lancea:
 -- CREATE OR REPLACE VIEW v_admin_centre_compare AS
--- SELECT ...
+-- SELECT
+--     s.centre_id,
+--     s.stall_id,
+--     s.name AS stall_name,
+--     s.grade,
+--     s.cuisine_type
+-- FROM stall s
+-- WHERE s.is_deleted = 0;

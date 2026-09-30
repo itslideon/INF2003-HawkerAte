@@ -1,7 +1,19 @@
 -- v_investor_rank.sql
--- Owner: LANCEA — Iter 3
+-- Owner: LANCEA — Iter 3 (name frozen in Iter 1)
 -- Purpose: rank/compare MANY centres/stalls (takings, cashless %, grade). Read-only.
+--
+-- Planned columns:
+--   centre_id, centre_name, stall_count,
+--   total_takings, cashless_pct, avg_grade
+--
+-- Extra-credit nested example lives in
+-- sql/queries/stalls_below_centre_avg_ticket.sql (still Iter 3).
 
--- TODO Lancea:
 -- CREATE OR REPLACE VIEW v_investor_rank AS
--- SELECT ...
+-- SELECT
+--     c.centre_id,
+--     c.name AS centre_name,
+--     COUNT(s.stall_id) AS stall_count
+-- FROM hawker_centre c
+-- LEFT JOIN stall s ON s.centre_id = c.centre_id AND s.is_deleted = 0
+-- GROUP BY c.centre_id, c.name;

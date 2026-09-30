@@ -1,7 +1,26 @@
 -- v_owner_takings.sql
--- Owner: LANCEA — Iter 2
+-- Owner: LANCEA — Iter 2 (name frozen in Iter 1)
 -- Purpose: per-stall takings dashboard for the owner role
+--
+-- Planned columns:
+--   stall_id, stall_name, centre_id, centre_name, cuisine_type, grade,
+--   today_sales, today_orders, today_avg_ticket,
+--   cash_today, cashless_today
+--
+-- Working SQL in Iter 2 once payment rows exist.
 
--- TODO Lancea:
 -- CREATE OR REPLACE VIEW v_owner_takings AS
--- SELECT ...
+-- SELECT
+--     s.stall_id,
+--     s.name AS stall_name,
+--     s.centre_id,
+--     c.name AS centre_name,
+--     s.cuisine_type,
+--     s.grade,
+--     SUM(CASE WHEN DATE(o.created_at) = CURDATE() THEN o.total_amount ELSE 0 END) AS today_sales,
+--     COUNT(CASE WHEN DATE(o.created_at) = CURDATE() THEN o.order_id END) AS today_orders
+-- FROM stall s
+-- JOIN hawker_centre c ON c.centre_id = s.centre_id
+-- LEFT JOIN orders o ON o.stall_id = s.stall_id AND o.status = 'paid'
+-- WHERE s.is_deleted = 0
+-- GROUP BY s.stall_id, s.name, s.centre_id, c.name, s.cuisine_type, s.grade;
