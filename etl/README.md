@@ -23,6 +23,8 @@ python etl/scripts/generate_mongo_events.py
 
 Put downloaded CSVs / GeoJSON in `etl/raw/` (that folder is gitignored). Note the download date in `etl/raw/README.md` instead of committing the files.
 
+`load_prices.py` pulls a slim SingStat CPI extract (`singstat_cpi.csv`) if it is missing, then scales hawker dish prices by the **Hawker Centres** index (2024=100).
+
 `generate_orders.py` writes `etl/raw/generated_orders.csv` with:
 
 ```
