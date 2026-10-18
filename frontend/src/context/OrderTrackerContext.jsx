@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './AuthContext.jsx'
-import { MOCK_READY_DELAY_MS, getOrdersForUser, updateOrderStatus } from '../lib/orderStore.js'
+import { getOrdersForUser, updateOrderStatus } from '../lib/orderStore.js'
+import { getOrderQueue, markOrderReady } from '../lib/queueApi.js'
 
 const OrderTrackerContext = createContext(null)
+const POLL_MS = 3000
 
-// browser notifications are a bonus on top of the in-app banner — always feature-check,
-// and never let a blocked/unsupported API break the order flow
 function canUseBrowserNotifications() {
   return typeof window !== 'undefined' && 'Notification' in window
 }
@@ -28,63 +28,70 @@ function showBrowserNotification(title, body) {
   }
 }
 
+function isNowServing(queue) {
+  if (!queue) return false
+  if (queue.in_queue === false) return true
+  return Number(queue.ahead) === 0
+}
+
 export function OrderTrackerProvider({ children }) {
   const { user } = useAuth()
-  const [statuses, setStatuses] = useState({}) // order_id -> 'preparing' | 'ready'
-  const [sessionOrders, setSessionOrders] = useState({}) // orders placed in this tab, guests included
+  const [statuses, setStatuses] = useState({}) // order_id -> 'preparing' | 'ready' | 'collected'
+  const [queues, setQueues] = useState({}) // order_id -> API queue payload
+  const [sessionOrders, setSessionOrders] = useState({})
   const [notices, setNotices] = useState([])
-  const timers = useRef(new Map())
+  const readyNotified = useRef(new Set())
 
-  const markReady = useCallback((order) => {
-    timers.current.delete(order.order_id)
-    setStatuses((prev) => ({ ...prev, [order.order_id]: 'ready' }))
-    if (order.customer_id) updateOrderStatus(order.customer_id, order.order_id, 'ready')
+  const announceReady = useCallback((order) => {
+    const id = order.order_id
+    if (readyNotified.current.has(id)) return
+    readyNotified.current.add(id)
+    setStatuses((prev) => ({ ...prev, [id]: 'ready' }))
+    if (order.customer_id) updateOrderStatus(order.customer_id, id, 'ready')
     setNotices((prev) => [
       ...prev,
-      { id: order.order_id, orderId: order.order_id, stallName: order.stall_name },
+      { id, orderId: id, stallName: order.stall_name },
     ])
-    showBrowserNotification('Your food is ready!', `Order ${order.order_id} — collect it at ${order.stall_name}.`)
+    showBrowserNotification('Your food is ready!', `Order ${id} — collect it at ${order.stall_name}.`)
   }, [])
 
-  const scheduleReady = useCallback(
-    (order, delayMs) => {
-      if (timers.current.has(order.order_id)) return
-      timers.current.set(order.order_id, setTimeout(() => markReady(order), delayMs))
+  const applyQueue = useCallback(
+    (order, queue) => {
+      if (!queue) return
+      setQueues((prev) => ({ ...prev, [order.order_id]: queue }))
+      if (queue.in_queue === false) {
+        setStatuses((prev) => ({ ...prev, [order.order_id]: 'collected' }))
+        if (order.customer_id) updateOrderStatus(order.customer_id, order.order_id, 'collected')
+        return
+      }
+      if (isNowServing(queue)) announceReady(order)
+      else setStatuses((prev) => ({ ...prev, [order.order_id]: prev[order.order_id] ?? 'preparing' }))
     },
-    [markReady],
+    [announceReady],
   )
 
   const trackOrder = useCallback(
-    (order) => {
+    (order, queueFromPay) => {
       setSessionOrders((prev) => ({ ...prev, [order.order_id]: order }))
       setStatuses((prev) => ({ ...prev, [order.order_id]: 'preparing' }))
-      scheduleReady(order, MOCK_READY_DELAY_MS)
+      if (queueFromPay) applyQueue(order, queueFromPay)
     },
-    [scheduleReady],
+    [applyQueue],
   )
+
+  const collectOrder = useCallback(async (orderId) => {
+    const result = await markOrderReady(orderId)
+    if (result?.ok === false) return result
+    setStatuses((prev) => ({ ...prev, [orderId]: 'collected' }))
+    setQueues((prev) => ({
+      ...prev,
+      [orderId]: { ...(prev[orderId] || {}), in_queue: false, ahead: 0 },
+    }))
+    return result ?? { ok: true }
+  }, [])
 
   const dismissNotice = useCallback((id) => {
     setNotices((prev) => prev.filter((notice) => notice.id !== id))
-  }, [])
-
-  // pick up orders still preparing after a reload / re-login, so the alert isn't lost
-  useEffect(() => {
-    if (!user) return
-    getOrdersForUser(user.customer_id)
-      .filter((order) => order.status === 'preparing')
-      .forEach((order) => {
-        const remaining = new Date(order.placed_at).getTime() + MOCK_READY_DELAY_MS - Date.now()
-        setStatuses((prev) => ({ ...prev, [order.order_id]: prev[order.order_id] ?? 'preparing' }))
-        scheduleReady(order, Math.max(remaining, 0))
-      })
-  }, [user, scheduleReady])
-
-  useEffect(() => {
-    const pending = timers.current
-    return () => {
-      pending.forEach(clearTimeout)
-      pending.clear()
-    }
   }, [])
 
   const getOrder = useCallback(
@@ -96,9 +103,43 @@ export function OrderTrackerProvider({ children }) {
     [sessionOrders, user],
   )
 
+  useEffect(() => {
+    if (!user) return
+    getOrdersForUser(user.customer_id)
+      .filter((order) => order.status === 'preparing' || order.status === 'ready')
+      .forEach((order) => {
+        setSessionOrders((prev) => (prev[order.order_id] ? prev : { ...prev, [order.order_id]: order }))
+        setStatuses((prev) => ({ ...prev, [order.order_id]: prev[order.order_id] ?? order.status }))
+      })
+  }, [user])
+
+  useEffect(() => {
+    const ids = Object.keys(sessionOrders)
+    if (ids.length === 0) return undefined
+
+    let cancelled = false
+
+    const poll = async () => {
+      for (const id of ids) {
+        if (cancelled) return
+        const order = sessionOrders[id]
+        const data = await getOrderQueue(id)
+        if (!data || cancelled) continue
+        applyQueue(order, data)
+      }
+    }
+
+    poll()
+    const timer = setInterval(poll, POLL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [sessionOrders, applyQueue])
+
   const value = useMemo(
-    () => ({ statuses, notices, trackOrder, dismissNotice, getOrder }),
-    [statuses, notices, trackOrder, dismissNotice, getOrder],
+    () => ({ statuses, queues, notices, trackOrder, collectOrder, dismissNotice, getOrder }),
+    [statuses, queues, notices, trackOrder, collectOrder, dismissNotice, getOrder],
   )
 
   return <OrderTrackerContext.Provider value={value}>{children}</OrderTrackerContext.Provider>

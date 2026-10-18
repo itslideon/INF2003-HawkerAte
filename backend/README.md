@@ -18,7 +18,13 @@ Reviews (Mongo):
 
 Checkout (one MariaDB transaction, then a Mongo `payment_events` doc):
 
-- `POST /orders/pay` — if Mongo fails after SQL commit, SQL still stands and `mongo_written` is `false`
+- `POST /orders/pay` — if Mongo fails after SQL commit, SQL still stands and `mongo_written` is `false`. Response includes `queue` (`ticket_no`, `ahead`, `now_serving_ticket`).
+
+Queue (`stall_queue`, apply `sql/schema/04_queue.sql`):
+
+- `GET /stalls/<id>/queue`
+- `GET /orders/<id>/queue`
+- `POST /orders/<id>/ready` — leave the line
 
 Ids in Mongo are strings of the MariaDB ints (`1` → `"1"`). Request/response shapes: `docs/api-contract.md`.
 
@@ -29,7 +35,7 @@ Not implemented here yet: refund, dining sessions, admin summary, investor rank.
 From the repo root.
 
 1. Copy `.env.example` to `.env`. Fill `DB_*` (MariaDB) and `MONGO_URI` / `MONGO_DB` (Atlas Database Access user, not the Atlas website login). Don’t commit `.env`.
-2. Create DB `hawkerate`. Apply `sql/schema/01_core.sql` then `sql/schema/02_fintech.sql`. Optional sample rows: `sql/schema/test_inserts.sql`.
+2. Create DB `hawkerate`. Apply `sql/schema/01_core.sql` then `sql/schema/02_fintech.sql`, then `sql/schema/04_queue.sql` for the stall line. Optional sample rows: `sql/schema/test_inserts.sql`.
 3. Atlas: Network Access must include this machine’s IP or the ping will fail with an SSL handshake error.
 4. Install and run:
 

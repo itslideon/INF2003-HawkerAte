@@ -33,10 +33,27 @@ POST /reviews
 ```
 POST /orders/pay
   body: { customer_id, stall_id, items: [{ menu_item_id, quantity }], method }
-  → { order_id, status, total_amount, mongo_written }
+  → { order_id, status, total_amount, mongo_written, queue }
 ```
 
 `method` is `paynow`, `card`, or `cash`. Totals come from menu prices in MariaDB. After the SQL commit succeeds, a `payment_events` document is inserted in Mongo.
+
+`queue` is `{ ticket_no, ahead, now_serving_ticket, stall_id, order_id, in_queue }`. Needs `sql/schema/04_queue.sql`. Line is table `stall_queue`, not a column on `orders`.
+
+## Queue
+
+```
+GET /stalls/:id/queue
+  → { stall_id, now_serving_ticket, waiting, line: [{ order_id, ticket_no, customer_id }] }
+
+GET /orders/:id/queue
+  → { in_queue, ticket_no, ahead, now_serving_ticket, … } or { in_queue: false }
+
+POST /orders/:id/ready
+  → { ok, order_id, in_queue: false }
+```
+
+`now_serving_ticket` is the smallest `ticket_no` still in that stall’s line. `ahead` is how many tickets are smaller than yours. `POST …/ready` removes the order from the line (food collected). Refund should do the same when that endpoint exists.
 
 ## Later
 

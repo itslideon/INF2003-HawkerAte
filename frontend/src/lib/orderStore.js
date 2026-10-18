@@ -15,11 +15,6 @@ export function paymentMethodLabel(value) {
   return PAYMENT_METHODS.find((method) => method.value === value)?.label ?? value
 }
 
-// stand-in for the backend telling us the food is ready. the contract has no "ready" state
-// yet (orders.status is only pending/paid/cancelled/refunded), so until Lideon adds one the
-// order is marked ready locally after this delay. short on purpose so the demo shows it.
-export const MOCK_READY_DELAY_MS = 20_000
-
 export function buildOrderLines(orderId, basketEntries) {
   return basketEntries.map(({ dish, quantity }, index) => ({
     order_line_id: `${orderId}-L${index + 1}`,

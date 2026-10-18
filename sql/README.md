@@ -12,19 +12,21 @@ Run the scripts in this order — later files assume earlier tables exist:
 1. `schema/01_core.sql` — centres, stalls, menu, customers, wallets
 2. `schema/02_fintech.sql` — orders, lines, payments, ledger
 3. `schema/03_split.sql` — group bill split (used later)
-4. `views/*.sql`
-5. `indexes.sql`
+4. `schema/04_queue.sql` — stall line (`ticket_no`); after `02_fintech.sql`
+5. `views/*.sql`
+6. `indexes.sql`
 
 ```bash
 mysql -u root -p hawkerate < sql/schema/01_core.sql
 mysql -u root -p hawkerate < sql/schema/test_inserts.sql
 mysql -u root -p hawkerate < sql/schema/02_fintech.sql
 mysql -u root -p hawkerate < sql/schema/03_split.sql
+mysql -u root -p hawkerate < sql/schema/04_queue.sql
 mysql -u root -p hawkerate < sql/views/v_daily_settlement.sql
 mysql -u root -p hawkerate < sql/indexes.sql
 ```
 
-Checkout (`POST /orders/pay`) needs `01_core.sql` **and** `02_fintech.sql`. `test_inserts.sql` is optional and only after `01_core.sql`. Views/indexes can wait until those files are filled in.
+Checkout (`POST /orders/pay`) needs `01_core.sql` **and** `02_fintech.sql`. Queue endpoints also need `04_queue.sql`. `test_inserts.sql` is optional and only after `01_core.sql`. Views/indexes can wait until those files are filled in.
 
 On Windows, if `mysqld` is not a service, start it with a quoted `--defaults-file=` (paths with spaces break if unquoted). Empty root password: omit `-p` or pass an empty one, matching `.env` `DB_PASSWORD`.
 

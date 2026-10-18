@@ -39,7 +39,7 @@ Folder READMEs have the extra detail (Windows MariaDB, PowerShell `curl`, Atlas)
 
 ## Status
 
-**Working in the API:** browse centres/stalls/menu, stall reviews (Mongo), checkout `POST /orders/pay` (one MariaDB transaction, then a `payment_events` document).
+**Working in the API:** browse centres/stalls/menu, stall reviews (Mongo), checkout `POST /orders/pay` (one MariaDB transaction, then a `payment_events` document), stall queue (`04_queue.sql`).
 
 **Not built yet:** refunds, dining-session split HTTP APIs, owner/admin/investor endpoints, ETL order generator (`etl/scripts/generate_orders.py` is still a stub).
 

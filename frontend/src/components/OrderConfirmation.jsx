@@ -2,8 +2,20 @@ import { useNavigate } from 'react-router-dom'
 import Reveal from './Reveal.jsx'
 import { paymentMethodLabel } from '../lib/orderStore.js'
 
-export default function OrderConfirmation({ order, isReady, heading }) {
+export default function OrderConfirmation({ order, queue, isReady, collected, onCollect, heading }) {
   const navigate = useNavigate()
+  const ticket = queue?.ticket_no
+  const ahead = queue?.ahead
+  const nowServing = queue?.now_serving_ticket
+
+  let waitLine = "Keep this page open — we'll alert you when you're next."
+  if (typeof ahead === 'number' && ahead > 0) {
+    waitLine = `${ahead} ahead of you. Now serving ticket ${nowServing ?? '—'}.`
+  } else if (isReady && !collected) {
+    waitLine = `Collect it at the ${order.stall_name} counter.`
+  } else if (collected) {
+    waitLine = 'Thanks — you’re off the stall line.'
+  }
 
   return (
     <div className="flex w-full flex-1 items-center justify-center px-4 py-8">
@@ -11,11 +23,14 @@ export default function OrderConfirmation({ order, isReady, heading }) {
         <div className="flex size-14 items-center justify-center rounded-full bg-lime text-2xl">✓</div>
         <h1 className="text-3xl font-extrabold text-ink">{heading}</h1>
         <p className="text-base text-muted">
-          Show this order ID at the {order.stall_name} counter to collect your food.
+          Show this ticket at the {order.stall_name} counter to collect your food.
         </p>
         <div className="flex w-full flex-col items-center gap-1 rounded-2xl bg-cream p-5">
-          <p className="text-[11px] font-bold uppercase text-muted">Order ID</p>
-          <p className="text-2xl font-extrabold tracking-wide text-ink">{order.order_id}</p>
+          <p className="text-[11px] font-bold uppercase text-muted">Queue ticket</p>
+          <p className="text-2xl font-extrabold tracking-wide text-ink">
+            {ticket != null ? `#${ticket}` : `Order ${order.order_id}`}
+          </p>
+          <p className="text-[11px] text-muted">Order {order.order_id}</p>
         </div>
         <div
           className={`flex w-full items-center gap-3 rounded-2xl p-4 text-left ${
@@ -27,14 +42,21 @@ export default function OrderConfirmation({ order, isReady, heading }) {
             className={`size-3 shrink-0 rounded-full ${isReady ? 'bg-forest' : 'animate-pulse-glow bg-amber'}`}
           />
           <div className="flex flex-col gap-0.5">
-            <p className="text-base font-extrabold">{isReady ? 'Your food is ready!' : 'Preparing your order…'}</p>
-            <p className={`text-[13px] ${isReady ? 'text-ink/73' : 'text-white/73'}`}>
-              {isReady
-                ? `Collect it at the ${order.stall_name} counter.`
-                : "Keep this page open — we'll alert you the moment it's ready."}
+            <p className="text-base font-extrabold">
+              {collected ? 'Collected' : isReady ? "You're next — collect now" : 'In the stall line…'}
             </p>
+            <p className={`text-[13px] ${isReady ? 'text-ink/73' : 'text-white/73'}`}>{waitLine}</p>
           </div>
         </div>
+        {isReady && !collected && onCollect ? (
+          <button
+            type="button"
+            onClick={onCollect}
+            className="w-full rounded-full bg-forest px-5 py-3 text-sm font-bold text-white transition-opacity duration-200 hover:opacity-80"
+          >
+            I’ve collected it
+          </button>
+        ) : null}
         <div className="flex w-full flex-col gap-2 text-left">
           {order.items.map((item) => (
             <div key={item.order_line_id} className="flex w-full items-start justify-between text-sm text-ink">

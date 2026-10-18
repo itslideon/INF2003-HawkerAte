@@ -51,6 +51,47 @@ def as_id_str(value):
     return str(value).strip()
 
 
+def _enqueue(cur, stall_id, order_id):
+    """Next ticket for this stall. Caller must hold a lock on the stall row."""
+    cur.execute(
+        "SELECT COALESCE(MAX(ticket_no), 0) AS m FROM stall_queue WHERE stall_id = %s",
+        (stall_id,),
+    )
+    ticket = int(cur.fetchone()["m"]) + 1
+    cur.execute(
+        """
+        INSERT INTO stall_queue (stall_id, order_id, ticket_no)
+        VALUES (%s, %s, %s)
+        """,
+        (stall_id, order_id, ticket),
+    )
+    return ticket
+
+
+def _queue_payload(cur, stall_id, order_id, ticket_no):
+    cur.execute(
+        """
+        SELECT COUNT(*) AS n FROM stall_queue
+        WHERE stall_id = %s AND ticket_no < %s
+        """,
+        (stall_id, ticket_no),
+    )
+    ahead = int(cur.fetchone()["n"])
+    cur.execute(
+        "SELECT MIN(ticket_no) AS now_serving FROM stall_queue WHERE stall_id = %s",
+        (stall_id,),
+    )
+    now_serving = cur.fetchone()["now_serving"]
+    return {
+        "stall_id": stall_id,
+        "order_id": order_id,
+        "ticket_no": ticket_no,
+        "ahead": ahead,
+        "now_serving_ticket": now_serving,
+        "in_queue": True,
+    }
+
+
 @app.get("/health")
 def health():
     """MariaDB + Mongo connectivity check."""
@@ -220,7 +261,7 @@ def _write_payment_event(order_id, stall_id, customer_id, amount, method):
 @app.post("/orders/pay")
 def pay_order():
     """
-    One MariaDB transaction: order, lines, payment, ledger, wallet.
+    One MariaDB transaction: order, lines, payment, ledger, wallet, stall_queue ticket.
     Then a payment_events document in Mongo. If Mongo fails, SQL still stands
     and the response sets mongo_written to false.
     """
@@ -254,6 +295,7 @@ def pay_order():
 
     conn = None
     order_id = None
+    queue = None
     total = Decimal("0.00")
     try:
         conn = get_conn()
@@ -261,7 +303,7 @@ def pay_order():
         conn.start_transaction()
 
         cur.execute(
-            "SELECT stall_id FROM stall WHERE stall_id = %s AND is_deleted = 0",
+            "SELECT stall_id FROM stall WHERE stall_id = %s AND is_deleted = 0 FOR UPDATE",
             (stall_id,),
         )
         if not cur.fetchone():
@@ -341,6 +383,8 @@ def pay_order():
             "UPDATE wallet SET balance = %s WHERE wallet_id = %s",
             (new_balance, wallet["wallet_id"]),
         )
+        ticket_no = _enqueue(cur, stall_id, order_id)
+        queue = _queue_payload(cur, stall_id, order_id, ticket_no)
         conn.commit()
         cur.close()
     except Error as exc:
@@ -365,7 +409,115 @@ def pay_order():
         "total_amount": float(total),
         "mongo_written": mongo_written,
         "mongo_error": mongo_error,
+        "queue": queue,
     }), 201
+
+
+@app.get("/stalls/<int:stall_id>/queue")
+def stall_queue(stall_id):
+    """Line for one stall: now serving = smallest ticket still waiting."""
+    try:
+        if not fetch_one(
+            "SELECT stall_id FROM stall WHERE stall_id = %s AND is_deleted = 0",
+            (stall_id,),
+        ):
+            return jsonify({"error": "stall not found"}), 404
+        rows = fetch_all(
+            """
+            SELECT order_id, ticket_no, customer_id
+            FROM stall_queue q
+            JOIN orders o USING (order_id)
+            WHERE q.stall_id = %s
+            ORDER BY ticket_no
+            """,
+            (stall_id,),
+        )
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+    now_serving = rows[0]["ticket_no"] if rows else None
+    return jsonify({
+        "stall_id": stall_id,
+        "now_serving_ticket": now_serving,
+        "waiting": len(rows),
+        "line": rows,
+    })
+
+
+@app.get("/orders/<int:order_id>/queue")
+def order_queue(order_id):
+    """This order's ticket, how many ahead, and who is now serving."""
+    conn = None
+    try:
+        conn = get_conn()
+        cur = conn.cursor(dictionary=True)
+        cur.execute(
+            """
+            SELECT stall_id, status FROM orders WHERE order_id = %s
+            """,
+            (order_id,),
+        )
+        order = cur.fetchone()
+        if not order:
+            return jsonify({"error": "order not found"}), 404
+        cur.execute(
+            "SELECT ticket_no FROM stall_queue WHERE order_id = %s",
+            (order_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return jsonify({
+                "order_id": order_id,
+                "stall_id": order["stall_id"],
+                "in_queue": False,
+            })
+        payload = _queue_payload(cur, order["stall_id"], order_id, int(row["ticket_no"]))
+        cur.close()
+        return jsonify(payload)
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/orders/<int:order_id>/ready")
+def order_ready(order_id):
+    """Leave the stall line (food collected / now serving moves on)."""
+    conn = None
+    try:
+        conn = get_conn()
+        cur = conn.cursor(dictionary=True)
+        conn.start_transaction()
+        cur.execute(
+            "SELECT stall_id FROM orders WHERE order_id = %s FOR UPDATE",
+            (order_id,),
+        )
+        order = cur.fetchone()
+        if not order:
+            conn.rollback()
+            return jsonify({"error": "order not found"}), 404
+        cur.execute(
+            "DELETE FROM stall_queue WHERE order_id = %s",
+            (order_id,),
+        )
+        left = cur.rowcount
+        conn.commit()
+        cur.close()
+        if not left:
+            return jsonify({
+                "ok": True,
+                "order_id": order_id,
+                "in_queue": False,
+                "already_left": True,
+            })
+        return jsonify({"ok": True, "order_id": order_id, "in_queue": False})
+    except Error as exc:
+        if conn:
+            conn.rollback()
+        return jsonify({"error": str(exc)}), 503
+    finally:
+        if conn:
+            conn.close()
 
 
 if __name__ == "__main__":

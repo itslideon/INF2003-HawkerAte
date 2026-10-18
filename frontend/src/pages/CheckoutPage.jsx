@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   const { stall } = useMenu()
   const { basketEntries, subtotal, itemCount, clearBasket } = useCart()
   const navigate = useNavigate()
-  const { statuses, trackOrder } = useOrderTracker()
+  const { statuses, queues, trackOrder, collectOrder } = useOrderTracker()
   const [method, setMethod] = useState(null)
   const [placedOrder, setPlacedOrder] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -49,7 +49,7 @@ export default function CheckoutPage() {
       return
     }
 
-    const { order_id: newOrderId, total_amount: serverTotal } = result.data
+    const { order_id: newOrderId, total_amount: serverTotal, queue } = result.data
     const order = {
       order_id: newOrderId,
       stall_id: stall.stall_id,
@@ -58,15 +58,14 @@ export default function CheckoutPage() {
       items: buildOrderLines(newOrderId, basketEntries),
       total_amount: serverTotal,
       method,
-      status: 'preparing', // frontend-only until the API has a "ready" state
+      status: 'preparing',
       placed_at: new Date().toISOString(),
     }
 
     if (user) saveOrderForUser(user.customer_id, order)
 
-    // asked here because browsers only allow the permission prompt from a click
     requestNotificationPermission()
-    trackOrder(order)
+    trackOrder(order, queue)
     setPlacedOrder(order)
     clearBasket()
   }
@@ -77,7 +76,10 @@ export default function CheckoutPage() {
         <Navigation />
         <OrderConfirmation
           order={placedOrder}
-          isReady={statuses[placedOrder.order_id] === 'ready'}
+          queue={queues[placedOrder.order_id]}
+          isReady={statuses[placedOrder.order_id] === 'ready' || statuses[placedOrder.order_id] === 'collected'}
+          collected={statuses[placedOrder.order_id] === 'collected'}
+          onCollect={() => collectOrder(placedOrder.order_id)}
           heading="Order placed!"
         />
       </div>
