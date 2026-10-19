@@ -1,6 +1,6 @@
 """HawkerAte HTTP API. See docs/api-contract.md for request/response shapes."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 import sys
@@ -25,6 +25,8 @@ def json_safe(value):
     if isinstance(value, Decimal):
         return float(value)
     if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
         return value.isoformat()
     return value
 
@@ -163,6 +165,49 @@ def menu_for_stall(stall_id):
             (stall_id,),
         )
         return jsonify(rows)
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+
+
+@app.get("/stalls/<int:stall_id>/takings")
+def stall_takings(stall_id):
+    """Today's owner totals from v_owner_takings. Zeros if no paid orders yet."""
+    try:
+        row = fetch_one(
+            "SELECT * FROM v_owner_takings WHERE stall_id = %s",
+            (stall_id,),
+        )
+        if not row:
+            return jsonify({"error": "stall not found"}), 404
+        return jsonify(row)
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+
+
+@app.get("/settlement")
+def daily_settlement():
+    """Paid sales by stall for one day (default today) from v_daily_settlement."""
+    day = (request.args.get("date") or "").strip()
+    if day:
+        try:
+            datetime.strptime(day, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+    try:
+        if not day:
+            rows = fetch_all(
+                "SELECT * FROM v_daily_settlement WHERE order_date = CURDATE() ORDER BY sales_total DESC"
+            )
+            return jsonify({"date": "today", "stalls": rows})
+        rows = fetch_all(
+            """
+            SELECT * FROM v_daily_settlement
+            WHERE order_date = %s
+            ORDER BY sales_total DESC
+            """,
+            (day,),
+        )
+        return jsonify({"date": day, "stalls": rows})
     except Error as exc:
         return jsonify({"error": str(exc)}), 503
 

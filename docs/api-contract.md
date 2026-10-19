@@ -55,6 +55,24 @@ POST /orders/:id/ready
 
 `now_serving_ticket` is the smallest `ticket_no` still in that stall’s line. `ahead` is how many tickets are smaller than yours. `POST …/ready` removes the order from the line (food collected). Refund should do the same when that endpoint exists.
 
+## Owner (MariaDB views)
+
+Needs `sql/views/v_owner_takings.sql` and `v_daily_settlement.sql`. Totals are SQL SUMs. If a stall has no paid orders today, takings are `0`, not a placeholder.
+
+```
+GET /stalls/:id/takings
+  → { stall_id, stall_name, centre_id, centre_name, cuisine_type, grade,
+      today_sales, today_orders, today_avg_ticket, cash_today, cashless_today }
+
+GET /settlement
+GET /settlement?date=YYYY-MM-DD
+  → { date, stalls: [{ stall_id, stall_name, cuisine_type, order_date,
+      order_count, sales_total, avg_ticket, cuisine_avg_ticket,
+      cash_sales, paynow_sales, card_sales }] }
+```
+
+Omit `date` for `CURDATE()`. Empty `stalls: []` means no paid orders that day.
+
 ## Later
 
 ```

@@ -1,5 +1,8 @@
 # Queries
 
-Standalone SQL for heavier reporting (nested queries), e.g. stalls whose average ticket sits below their centre’s average (`stalls_below_centre_avg_ticket.sql`).
+Standalone SQL for heavier reporting.
 
-Working query in **Iter 3**. The file currently holds the sketched nested `HAVING` shape only.
+| File | When |
+|------|------|
+| `payment_method_mix.sql` | Iter 2 — actual cash / PayNow / card % vs MAS-inspired demo targets |
+| `stalls_below_centre_avg_ticket.sql` | Iter 3 — nested extra-credit query (shape only until more orders exist) |

@@ -2,7 +2,9 @@
 
 Run these after `schema/01_core.sql` and `schema/02_fintech.sql`. Split-related views also need `03_split.sql`.
 
-Names frozen in Iter 1. Working `CREATE VIEW` statements wait until Iter 2 (orders exist).
+Run after `01_core.sql` and `02_fintech.sql`. Iter 2 views are live: empty result / zeros mean no paid orders yet — the UI must not invent totals.
+
+`GET /stalls/:id/takings` and `GET /settlement` read these views.
 
 | File | What it’s for | When |
 |------|----------------|------|

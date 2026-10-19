@@ -1,4 +1,5 @@
-import Button from '../components/Button.jsx'
+import { Link } from 'react-router-dom'
+import arrowUpRightAlt from '../assets/arrow-up-right-alt.svg'
 import Reveal from '../components/Reveal.jsx'
 
 export default function PartnerCTA() {
@@ -11,9 +12,13 @@ export default function PartnerCTA() {
         </h2>
       </Reveal>
       <Reveal delay={150}>
-        <Button variant="dark" to="contact">
-          Partner with us
-        </Button>
+        <Link
+          to="/owner"
+          className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-bold whitespace-nowrap text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-ink/90 hover:opacity-60 hover:shadow-md active:translate-y-0"
+        >
+          <span>See today’s takings</span>
+          <img src={arrowUpRightAlt} alt="" className="size-[15px]" />
+        </Link>
       </Reveal>
     </section>
   )
