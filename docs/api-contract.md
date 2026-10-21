@@ -53,7 +53,16 @@ POST /orders/:id/ready
   → { ok, order_id, in_queue: false }
 ```
 
-`now_serving_ticket` is the smallest `ticket_no` still in that stall’s line. `ahead` is how many tickets are smaller than yours. `POST …/ready` removes the order from the line (food collected). Refund should do the same when that endpoint exists.
+`now_serving_ticket` is the smallest `ticket_no` still in that stall’s line. `ahead` is how many tickets are smaller than yours. `POST …/ready` removes the order from the line (food collected). Refund also drops the queue row.
+
+## Refund
+
+```
+POST /orders/:id/refund
+  → { order_id, status: "refunded", refund_amount, mongo_written }
+```
+
+One MariaDB transaction: new `ledger_entry` (`entry_type=refund`), wallet credit, `orders.status=refunded`, leave `stall_queue`. Never `DELETE` `payment` or ledger rows. Mongo `payment_events` with `event_type=refund` and a **negative** `amount` is written only after SQL commit (`mongo_written` is `false` if Mongo fails). `409` if already refunded; only `paid` orders can be refunded.
 
 ## Owner (MariaDB views)
 
@@ -76,7 +85,6 @@ Omit `date` for `CURDATE()`. Empty `stalls: []` means no paid orders that day.
 ## Later
 
 ```
-POST /orders/:id/refund
 POST /dining-sessions
 GET  /centres/:id/admin-summary
 GET  /investor/rank

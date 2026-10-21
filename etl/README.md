@@ -25,7 +25,7 @@ Put downloaded CSVs / GeoJSON in `etl/raw/` (that folder is gitignored). Note th
 
 `load_prices.py` pulls a slim SingStat CPI extract (`singstat_cpi.csv`) if it is missing, then scales hawker dish prices by the **Hawker Centres** index (2024=100).
 
-When `generate_orders.py` exists, pick `method` with this hawker-demo mix (MAS national stats are not stall-level PayNow; hawkers stay a bit more cash than overall retail):
+`generate_orders.py` picks `method` with this hawker-demo mix (MAS national stats are not stall-level PayNow; hawkers stay a bit more cash than overall retail):
 
 - `paynow` 45%
 - `card` 20%

@@ -19,6 +19,7 @@ Reviews (Mongo):
 Checkout (one MariaDB transaction, then a Mongo `payment_events` doc):
 
 - `POST /orders/pay` — if Mongo fails after SQL commit, SQL still stands and `mongo_written` is `false`. Response includes `queue` (`ticket_no`, `ahead`, `now_serving_ticket`).
+- `POST /orders/<id>/refund` — reversing `ledger_entry`, wallet credit, status `refunded`; never deletes payment/ledger. Mongo refund event after SQL (`mongo_written`). Drops the queue row.
 
 Queue (`stall_queue`, apply `sql/schema/04_queue.sql`):
 
@@ -33,7 +34,7 @@ Owner (apply `sql/views/v_owner_takings.sql` and `v_daily_settlement.sql`):
 
 Ids in Mongo are strings of the MariaDB ints (`1` → `"1"`). Request/response shapes: `docs/api-contract.md`.
 
-Not implemented here yet: refund, dining sessions, admin summary, investor rank.
+Not implemented here yet: dining sessions, admin summary, investor rank.
 
 ## Setup
 
@@ -61,5 +62,5 @@ Frontend: `VITE_API_BASE_URL=http://localhost:3000` in `frontend/.env`.
 ## Next (API)
 
 1. Confirm `GET /health` with both databases up, then a real `POST /reviews` and `POST /orders/pay` against local MariaDB + Atlas.
-2. Iter 2–3: `POST /orders/:id/refund`, dining-session split, keep ledger append-only.
-3. `etl/scripts/generate_orders.py` — same rules as pay; write ids to `etl/raw/generated_orders.csv` for the Mongo event loader.
+2. Iter 3: dining-session split, keep ledger append-only.
+3. `etl/scripts/generate_orders.py` — same rules as pay; overwrites `etl/raw/generated_orders.csv` for Wileen’s Mongo loader.

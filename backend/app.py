@@ -469,6 +469,126 @@ def pay_order():
     }), 201
 
 
+def _write_refund_event(order_id, stall_id, customer_id, amount, method):
+    """Append-only refund in Mongo. Called only after the SQL commit.
+
+    Amount is stored negative (Wileen's seed / example). Does not rewrite
+    the original payment doc. reversed_event_id is set if that payment event exists.
+    """
+    db = get_mongo_db()
+    original = db.payment_events.find_one({
+        "order_id": as_id_str(order_id),
+        "event_type": "payment",
+    })
+    doc = {
+        "order_id": as_id_str(order_id),
+        "stall_id": as_id_str(stall_id),
+        "customer_id": as_id_str(customer_id),
+        "amount": -float(amount),
+        "method": method,
+        "event_type": "refund",
+        "created_at": datetime.now(timezone.utc),
+    }
+    if original:
+        doc["reversed_event_id"] = original["_id"]
+    db.payment_events.insert_one(doc)
+
+
+@app.post("/orders/<int:order_id>/refund")
+def refund_order(order_id):
+    """
+    One MariaDB transaction: reversing ledger_entry, wallet credit, order
+    refunded, drop stall_queue row. Never DELETE payment or ledger rows.
+    Then a payment_events refund document. If Mongo fails, SQL still stands.
+    """
+    conn = None
+    customer_id = None
+    stall_id = None
+    method = None
+    total = Decimal("0.00")
+    try:
+        conn = get_conn()
+        cur = conn.cursor(dictionary=True)
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT o.order_id, o.customer_id, o.stall_id, o.status, o.total_amount,
+                   p.method, w.wallet_id, w.balance
+            FROM orders o
+            INNER JOIN payment p ON p.order_id = o.order_id
+            INNER JOIN wallet w ON w.customer_id = o.customer_id
+            WHERE o.order_id = %s
+            FOR UPDATE
+            """,
+            (order_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.rollback()
+            cur.execute("SELECT order_id FROM orders WHERE order_id = %s", (order_id,))
+            exists = cur.fetchone()
+            if not exists:
+                return jsonify({"error": "order not found"}), 404
+            return jsonify({"error": "order has no payment to refund"}), 400
+        if row["status"] == "refunded":
+            conn.rollback()
+            return jsonify({"error": "order already refunded"}), 409
+        if row["status"] != "paid":
+            conn.rollback()
+            return jsonify({"error": "only paid orders can be refunded"}), 400
+
+        customer_id = row["customer_id"]
+        stall_id = row["stall_id"]
+        method = row["method"]
+        total = Decimal(str(row["total_amount"])).quantize(Decimal("0.01"))
+        new_balance = Decimal(str(row["balance"])) + total
+
+        cur.execute(
+            """
+            INSERT INTO ledger_entry (wallet_id, order_id, entry_type, amount)
+            VALUES (%s, %s, 'refund', %s)
+            """,
+            (row["wallet_id"], order_id, total),
+        )
+        cur.execute(
+            "UPDATE wallet SET balance = %s WHERE wallet_id = %s",
+            (new_balance, row["wallet_id"]),
+        )
+        cur.execute(
+            "UPDATE orders SET status = 'refunded' WHERE order_id = %s",
+            (order_id,),
+        )
+        cur.execute(
+            "DELETE FROM stall_queue WHERE order_id = %s",
+            (order_id,),
+        )
+        conn.commit()
+        cur.close()
+    except Error as exc:
+        if conn:
+            conn.rollback()
+        return jsonify({"error": str(exc)}), 503
+    finally:
+        if conn:
+            conn.close()
+
+    mongo_written = True
+    mongo_error = None
+    try:
+        _write_refund_event(order_id, stall_id, customer_id, total, method)
+    except (PyMongoError, RuntimeError) as exc:
+        mongo_written = False
+        mongo_error = str(exc)
+
+    return jsonify({
+        "order_id": order_id,
+        "status": "refunded",
+        "refund_amount": float(total),
+        "mongo_written": mongo_written,
+        "mongo_error": mongo_error,
+    })
+
+
 # ---------------------------------------------------------------------------
 # Mongo payment_events analytics (Wileen)
 # ---------------------------------------------------------------------------
