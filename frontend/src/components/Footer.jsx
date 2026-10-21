@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import brandMark from '../assets/brand-mark.svg'
 
 const exploreLinks = [
@@ -39,6 +40,16 @@ export default function Footer() {
                 {link.label}
               </a>
             ))}
+          </div>
+
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-xs font-bold uppercase text-white/40">For stalls</p>
+            <Link
+              to="/stall"
+              className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"
+            >
+              Stall queue
+            </Link>
           </div>
 
           <div className="flex flex-col items-start gap-3">

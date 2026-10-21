@@ -9,6 +9,7 @@ import EditAccount from './pages/EditAccount.jsx'
 import CheckoutPage from './pages/CheckoutPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
 import OwnerPage from './pages/OwnerPage.jsx'
+import StallQueuePage from './pages/StallQueuePage.jsx'
 import OrderReadyToasts from './components/OrderReadyToasts.jsx'
 
 function ScrollToTop() {
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orders/:orderId" element={<OrderStatusPage />} />
         <Route path="/owner" element={<OwnerPage />} />
+        <Route path="/stall" element={<StallQueuePage />} />
       </Routes>
     </>
   )
