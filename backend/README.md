@@ -26,6 +26,11 @@ Queue (`stall_queue`, apply `sql/schema/04_queue.sql`):
 - `GET /orders/<id>/queue`
 - `POST /orders/<id>/ready` — leave the line
 
+Owner (apply `sql/views/v_owner_takings.sql` and `v_daily_settlement.sql`):
+
+- `GET /stalls/<id>/takings` — today’s SQL totals for one stall (`0` if none)
+- `GET /settlement` — today’s paid sales by stall; `?date=YYYY-MM-DD` for another day
+
 Ids in Mongo are strings of the MariaDB ints (`1` → `"1"`). Request/response shapes: `docs/api-contract.md`.
 
 Not implemented here yet: refund, dining sessions, admin summary, investor rank.

@@ -25,6 +25,14 @@ Put downloaded CSVs / GeoJSON in `etl/raw/` (that folder is gitignored). Note th
 
 `load_prices.py` pulls a slim SingStat CPI extract (`singstat_cpi.csv`) if it is missing, then scales hawker dish prices by the **Hawker Centres** index (2024=100).
 
+When `generate_orders.py` exists, pick `method` with this hawker-demo mix (MAS national stats are not stall-level PayNow; hawkers stay a bit more cash than overall retail):
+
+- `paynow` 45%
+- `card` 20%
+- `cash` 35%
+
+Check actual mix later with `sql/queries/payment_method_mix.sql`.
+
 ## Generated orders and Mongo events
 
 Generated orders are inserted straight into MariaDB, so they skip the `/orders/pay` route that normally writes the Mongo event. That is why step 3 exists.

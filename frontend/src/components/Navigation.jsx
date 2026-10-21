@@ -115,6 +115,10 @@ export default function Navigation() {
               </a>
             )
           })}
+          <Link to="/owner" className={linkClass(location.pathname === '/owner')}>
+            Owner
+            <span className={underlineClass(location.pathname === '/owner')} />
+          </Link>
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
@@ -148,6 +152,14 @@ export default function Navigation() {
               </a>
             )
           })}
+          <Link
+            to="/owner"
+            className={`w-full rounded-lg px-2 py-2.5 text-sm ${
+              location.pathname === '/owner' ? 'font-bold text-forest' : 'font-medium text-muted'
+            }`}
+          >
+            Owner
+          </Link>
         </div>
       )}
     </nav>
