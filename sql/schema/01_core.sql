@@ -27,11 +27,18 @@ CREATE TABLE stall (
     cuisine_type    VARCHAR(100),
     -- grade: nullable until SFA data is loaded (dataset 3, optional)
     grade           CHAR(1),
+    -- operating hours: nullable until the owner sets them; both set or both NULL
+    open_time       TIME,
+    close_time      TIME,
     is_deleted      TINYINT(1) NOT NULL DEFAULT 0,      -- soft delete only, never hard-delete a stall
     deleted_at      TIMESTAMP NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_stall_centre FOREIGN KEY (centre_id) REFERENCES hawker_centre(centre_id),
-    CONSTRAINT chk_stall_grade CHECK (grade IN ('A','B','C','D') OR grade IS NULL)
+    CONSTRAINT chk_stall_grade CHECK (grade IN ('A','B','C','D') OR grade IS NULL),
+    CONSTRAINT chk_stall_hours CHECK (
+        (open_time IS NULL AND close_time IS NULL)
+        OR (open_time IS NOT NULL AND close_time IS NOT NULL AND close_time > open_time)
+    )
 ) ENGINE=InnoDB;
 
 CREATE TABLE menu_item (
