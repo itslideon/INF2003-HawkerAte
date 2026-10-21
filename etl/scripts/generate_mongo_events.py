@@ -2,13 +2,17 @@
 generate_mongo_events.py
 Owner: WILEEN
 
-For every SQL order/payment created by generate_orders.py, insert a
-matching payment_events document in Mongo — mirroring the "insert
-AFTER MariaDB commit" rule from the real pay path.
+For every SQL order created by generate_orders.py, insert a matching
+payment_events document in Mongo (same rule as the live pay path:
+SQL first, Mongo after).
 
-Interchange format with generate_orders.py (documented in etl/README.md):
-Lideon's generate_orders.py appends one CSV row per created order to
-etl/raw/generated_orders.csv: order_id,stall_id,customer_id,amount,method
+Reads etl/raw/generated_orders.csv (or a path given as the first argument):
+    order_id,stall_id,customer_id,amount,method[,created_at]
+
+Safe to re-run: an order that already has a payment event is skipped.
+
+    python etl/scripts/generate_mongo_events.py
+    python etl/scripts/generate_mongo_events.py path/to/other.csv
 """
 
 import csv
@@ -17,60 +21,82 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pymongo import UpdateOne
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "nosql"))
 from db import get_db  # noqa: E402
 
-ORDERS_CSV = Path(__file__).resolve().parent.parent / "raw" / "generated_orders.csv"
+DEFAULT_CSV = Path(__file__).resolve().parent.parent / "raw" / "generated_orders.csv"
+METHODS = {"paynow", "card", "cash"}
+BATCH = 1000
 
 
-def generate_event_for_order(order_id: int, stall_id: int, customer_id: int,
-                              amount: float, method: str) -> None:
-    """Build the right shape of doc depending on method (paynow/card/cash
-    have different fields — see nosql/models/payment_events.example.json)
-    and insert into the `payment_events` collection in the `hawkerate`
-    Mongo DB. Payments are simulated, so paynow_ref/card_last4 are faked
-    here rather than coming from a real gateway."""
+def parse_time(value):
+    """ISO time from the CSV, treated as UTC if it has no timezone."""
+    if not value:
+        return datetime.now(timezone.utc)
+    dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def build_event(row):
+    """One payment_events doc. Ids are strings to match the Mongo schema."""
+    method = row["method"].strip().lower()
+    if method not in METHODS:
+        raise ValueError(f"unknown payment method: {row['method']!r}")
+
     doc = {
-        "order_id": order_id,
-        "stall_id": stall_id,
-        "customer_id": customer_id,
-        "amount": float(amount),
+        "order_id": str(row["order_id"]).strip(),
+        "stall_id": str(row["stall_id"]).strip(),
+        "customer_id": str(row["customer_id"]).strip(),
+        "amount": round(float(row["amount"]), 2),
         "method": method,
         "event_type": "payment",
-        "created_at": datetime.now(timezone.utc),
+        "created_at": parse_time(row.get("created_at")),
     }
-
+    # payments are simulated, so these references are faked
     if method == "paynow":
-        doc["paynow_ref"] = f"PN-{doc['created_at']:%Y%m%d}-{random.randint(0, 9999):04d}"
+        doc["paynow_ref"] = f"PN-{doc['order_id']}"
     elif method == "card":
         doc["card_last4"] = f"{random.randint(0, 9999):04d}"
-    elif method != "cash":
-        raise ValueError(f"unknown payment method: {method!r}")
-
-    get_db().payment_events.insert_one(doc)
+    return doc
 
 
-def run() -> None:
-    if not ORDERS_CSV.exists():
+def run(csv_path=DEFAULT_CSV):
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
         raise FileNotFoundError(
-            f"{ORDERS_CSV} not found — run generate_orders.py first, or check "
-            "the CSV path/columns still match what this script expects."
+            f"{csv_path} not found. Run generate_orders.py first, or check "
+            "the CSV path and columns match what this script expects."
         )
 
-    with ORDERS_CSV.open(newline="") as f:
+    with csv_path.open(newline="") as f:
         rows = list(csv.DictReader(f))
 
+    ops, bad = [], 0
     for row in rows:
-        generate_event_for_order(
-            order_id=int(row["order_id"]),
-            stall_id=int(row["stall_id"]),
-            customer_id=int(row["customer_id"]),
-            amount=float(row["amount"]),
-            method=row["method"],
-        )
+        try:
+            doc = build_event(row)
+        except (KeyError, ValueError) as exc:
+            bad += 1
+            print(f"skipping bad row {row}: {exc}")
+            continue
+        ops.append(UpdateOne(
+            {"order_id": doc["order_id"], "event_type": "payment"},
+            {"$setOnInsert": doc},
+            upsert=True,
+        ))
 
-    print(f"inserted {len(rows)} payment_events from {ORDERS_CSV}")
+    coll = get_db().payment_events
+    inserted = 0
+    for i in range(0, len(ops), BATCH):
+        result = coll.bulk_write(ops[i:i + BATCH], ordered=False)
+        inserted += result.upserted_count
+
+    skipped = len(ops) - inserted
+    print(f"{csv_path.name}: {len(rows)} rows, {inserted} inserted, "
+          f"{skipped} already in Mongo, {bad} bad rows")
 
 
 if __name__ == "__main__":
-    run()
+    run(sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CSV)
