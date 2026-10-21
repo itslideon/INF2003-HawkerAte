@@ -240,8 +240,13 @@ def create_review():
     }), 201
 
 
-def _write_payment_event(order_id, stall_id, customer_id, amount, method):
-    """Append-only payment log in Mongo. Called only after the SQL commit."""
+def _write_payment_event(order_id, stall_id, customer_id, amount, method, extras=None):
+    """Append-only payment log in Mongo. Called only after the SQL commit.
+
+    extras: optional sgqr / promo_code / device / card_last4 from the request.
+    Mongo never rewrites the SQL ledger; this is just an event log.
+    """
+    extras = extras or {}
     doc = {
         "order_id": as_id_str(order_id),
         "stall_id": as_id_str(stall_id),
@@ -254,7 +259,10 @@ def _write_payment_event(order_id, stall_id, customer_id, amount, method):
     if method == "paynow":
         doc["paynow_ref"] = f"PN-{order_id}"
     if method == "card":
-        doc["card_last4"] = "0000"
+        doc["card_last4"] = str(extras.get("card_last4") or "0000")[-4:]
+    for key in ("sgqr", "promo_code", "device"):
+        if extras.get(key):
+            doc[key] = str(extras[key])
     get_mongo_db().payment_events.insert_one(doc)
 
 
@@ -292,6 +300,9 @@ def pay_order():
             return jsonify({"error": "each item needs menu_item_id and quantity"}), 400
         if parsed_items[-1]["quantity"] < 1:
             return jsonify({"error": "quantity must be at least 1"}), 400
+
+    # optional extras that only go to Mongo (SQL schema doesn't store them)
+    extras = {k: body.get(k) for k in ("sgqr", "promo_code", "device", "card_last4") if body.get(k)}
 
     conn = None
     order_id = None
@@ -398,7 +409,7 @@ def pay_order():
     mongo_written = True
     mongo_error = None
     try:
-        _write_payment_event(order_id, stall_id, customer_id, total, method)
+        _write_payment_event(order_id, stall_id, customer_id, total, method, extras)
     except (PyMongoError, RuntimeError) as exc:
         mongo_written = False
         mongo_error = str(exc)
@@ -411,6 +422,102 @@ def pay_order():
         "mongo_error": mongo_error,
         "queue": queue,
     }), 201
+
+
+# ---------------------------------------------------------------------------
+# Mongo payment_events analytics (Wileen)
+# ---------------------------------------------------------------------------
+
+@app.get("/analytics/payments/by-stall")
+def payments_by_stall():
+    """Total + count of payment events per stall, straight from Mongo."""
+    try:
+        docs = list(get_mongo_db().payment_events.aggregate([
+            {"$match": {"event_type": "payment"}},
+            {"$group": {
+                "_id": "$stall_id",
+                "total": {"$sum": "$amount"},
+                "count": {"$sum": 1},
+            }},
+            {"$sort": {"total": -1}},
+        ]))
+    except (PyMongoError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 503
+    return jsonify([
+        {"stall_id": d["_id"], "total": round(d["total"], 2), "count": d["count"]}
+        for d in docs
+    ])
+
+
+@app.get("/analytics/payments/by-method")
+def payments_by_method():
+    """Total + count per payment method. Optional ?stall_id= to filter one stall."""
+    match = {"event_type": "payment"}
+    stall_id = request.args.get("stall_id")
+    if stall_id:
+        match["stall_id"] = as_id_str(stall_id)
+    try:
+        docs = list(get_mongo_db().payment_events.aggregate([
+            {"$match": match},
+            {"$group": {
+                "_id": "$method",
+                "total": {"$sum": "$amount"},
+                "count": {"$sum": 1},
+            }},
+            {"$sort": {"total": -1}},
+        ]))
+    except (PyMongoError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 503
+    return jsonify([
+        {"method": d["_id"], "total": round(d["total"], 2), "count": d["count"]}
+        for d in docs
+    ])
+
+
+@app.get("/analytics/payments/reconcile")
+def payments_reconcile():
+    """Mongo totals vs MariaDB SUM(payment.amount) per stall. SQL is the source of truth."""
+    try:
+        sql_rows = fetch_all(
+            """
+            SELECT o.stall_id, SUM(p.amount) AS total, COUNT(*) AS n
+            FROM payment p
+            JOIN orders o ON o.order_id = p.order_id
+            GROUP BY o.stall_id
+            """
+        )
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    try:
+        mongo_docs = list(get_mongo_db().payment_events.aggregate([
+            {"$match": {"event_type": "payment"}},
+            {"$group": {"_id": "$stall_id", "total": {"$sum": "$amount"}, "count": {"$sum": 1}}},
+        ]))
+    except (PyMongoError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    sql_by_stall = {as_id_str(r["stall_id"]): r for r in sql_rows}
+    mongo_by_stall = {d["_id"]: d for d in mongo_docs}
+
+    result = []
+    all_ok = True
+    for sid in sorted(set(sql_by_stall) | set(mongo_by_stall), key=lambda s: int(s) if s.isdigit() else s):
+        sql_total = round(float(sql_by_stall[sid]["total"]), 2) if sid in sql_by_stall else 0.0
+        sql_n = int(sql_by_stall[sid]["n"]) if sid in sql_by_stall else 0
+        m_total = round(float(mongo_by_stall[sid]["total"]), 2) if sid in mongo_by_stall else 0.0
+        m_n = int(mongo_by_stall[sid]["count"]) if sid in mongo_by_stall else 0
+        match = abs(sql_total - m_total) < 0.005 and sql_n == m_n
+        all_ok = all_ok and match
+        result.append({
+            "stall_id": sid,
+            "sql_total": sql_total,
+            "sql_count": sql_n,
+            "mongo_total": m_total,
+            "mongo_count": m_n,
+            "match": match,
+        })
+    return jsonify({"all_match": all_ok, "stalls": result})
 
 
 @app.get("/stalls/<int:stall_id>/queue")
