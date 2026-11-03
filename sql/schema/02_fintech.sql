@@ -6,6 +6,7 @@
 -- Checkout (POST /orders/pay) writes these in one transaction,
 -- then inserts a matching document in MongoDB payment_events.
 -- Wallet balances change only through ledger_entry rows.
+-- split_settle = Makan split friend → organizer (not a stall payment).
 -- =====================================================
 
 CREATE TABLE orders (
@@ -46,7 +47,7 @@ CREATE TABLE ledger_entry (
     ledger_entry_id INT AUTO_INCREMENT PRIMARY KEY,
     wallet_id       INT NOT NULL,
     order_id        INT,
-    entry_type      ENUM('payment','refund') NOT NULL,
+    entry_type      ENUM('payment','refund','split_settle') NOT NULL,
     amount          DECIMAL(10,2) NOT NULL,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_ledger_wallet FOREIGN KEY (wallet_id) REFERENCES wallet(wallet_id),

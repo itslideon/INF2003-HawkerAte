@@ -82,10 +82,50 @@ GET /settlement?date=YYYY-MM-DD
 
 Omit `date` for `CURDATE()`. Empty `stalls: []` means no paid orders that day.
 
-## Later
+## Split (Makan split — YouTrip-style)
+
+UI / video name: **Makan split** (*one bill to the stall, settle among friends*). SQL/HTTP names stay `dining_session` / `/dining-sessions`.
+
+Stall is already paid (`POST /orders/pay`). This records who owes the **organizer** (`orders.customer_id`). Friends settle later (wallet → organizer) — not extra stall checkouts. Needs `sql/schema/03_split.sql`. Demo: 3 friends.
 
 ```
 POST /dining-sessions
+  equal:   { order_id, split_type: "equal", customer_ids: [organizer, friend, friend] }
+  custom:  { order_id, split_type: "custom", members: [{ customer_id, share_amount }, …] }
+  by_item: { order_id, split_type: "by_item",
+             assignments: [{ order_line_id, customer_id, quantity }, …] }
+  → session object (below)
+
+GET /dining-sessions/:id
+GET /orders/:id/dining-session
+  → session object
+
+POST /dining-sessions/:id/settle
+  body: { customer_id }     // the friend, not the organizer
+  → updated session object
+```
+
+Session object (Kristen — Makan split UI):
+
+```
+{
+  product: "Makan split",
+  session_id, order_id, stall_id,
+  organizer_customer_id,
+  total_amount, stall_paid: true,
+  split_type, all_settled,
+  members: [{
+    session_member_id, customer_id, share_amount,
+    is_organizer, is_settled, settled_at
+  }]
+}
+```
+
+Organizer must be a member and is `is_settled: true` at create (they already paid the stall). Custom / by_item shares must sum to `orders.total_amount`. `409` if the order already has a session, or that friend already settled. Settle moves wallets through `ledger_entry.entry_type=split_settle` (friend down, organizer up). No Mongo stall event. No second `POST /orders/pay`.
+
+## Later
+
+```
 GET  /centres/:id/admin-summary
 GET  /investor/rank
 ```

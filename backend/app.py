@@ -19,6 +19,89 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}})
 
 METHODS = {"paynow", "card", "cash"}
+SPLIT_TYPES = {"equal", "by_item", "custom"}
+MONEY = Decimal("0.01")
+
+
+def as_money(value):
+    return Decimal(str(value)).quantize(MONEY)
+
+
+def _equal_shares(total, customer_ids):
+    """Split total across members in cents so shares sum exactly."""
+    cents = int((as_money(total) * 100).to_integral_value())
+    n = len(customer_ids)
+    base, rem = divmod(cents, n)
+    shares = []
+    for i, cid in enumerate(customer_ids):
+        piece = base + (1 if i < rem else 0)
+        amount = as_money(Decimal(piece) / 100)
+        if amount <= 0:
+            raise ValueError("equal split produced a non-positive share")
+        shares.append({"customer_id": cid, "share_amount": amount})
+    return shares
+
+
+def _custom_shares(members, total):
+    shares = []
+    seen = set()
+    running = Decimal("0.00")
+    for member in members:
+        try:
+            cid = int(member["customer_id"])
+            amount = as_money(member["share_amount"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("each member needs customer_id and share_amount") from exc
+        if cid in seen:
+            raise ValueError(f"duplicate customer_id {cid}")
+        if amount <= 0:
+            raise ValueError("share_amount must be positive")
+        seen.add(cid)
+        running += amount
+        shares.append({"customer_id": cid, "share_amount": amount})
+    if running != as_money(total):
+        raise ValueError(
+            f"custom shares {running} must equal order total {as_money(total)}"
+        )
+    return shares
+
+
+def _by_item_shares(assignments, lines, total):
+    leftover = {int(line["order_line_id"]): int(line["quantity"]) for line in lines}
+    price = {
+        int(line["order_line_id"]): as_money(line["unit_price"]) for line in lines
+    }
+    by_customer = {}
+    for row in assignments:
+        try:
+            line_id = int(row["order_line_id"])
+            cid = int(row["customer_id"])
+            qty = int(row["quantity"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "each assignment needs order_line_id, customer_id, quantity"
+            ) from exc
+        if qty < 1:
+            raise ValueError("assignment quantity must be at least 1")
+        if line_id not in leftover:
+            raise ValueError(f"order_line {line_id} is not on this order")
+        leftover[line_id] -= qty
+        if leftover[line_id] < 0:
+            raise ValueError(f"order_line {line_id} assigned more portions than ordered")
+        by_customer[cid] = by_customer.get(cid, Decimal("0.00")) + price[line_id] * qty
+    unpaid = [lid for lid, qty in leftover.items() if qty != 0]
+    if unpaid:
+        raise ValueError("by_item assignments must cover every order line exactly")
+    shares = [
+        {"customer_id": cid, "share_amount": as_money(amount)}
+        for cid, amount in sorted(by_customer.items())
+    ]
+    if any(s["share_amount"] <= 0 for s in shares):
+        raise ValueError("share_amount must be positive")
+    running = sum((s["share_amount"] for s in shares), Decimal("0.00"))
+    if running != as_money(total):
+        raise ValueError(f"by_item shares {running} must equal order total {as_money(total)}")
+    return shares
 
 
 def json_safe(value):
@@ -587,6 +670,356 @@ def refund_order(order_id):
         "mongo_written": mongo_written,
         "mongo_error": mongo_error,
     })
+
+
+def _session_payload(cur, session_id):
+    """JSON Kristen uses for the Makan split screen."""
+    cur.execute(
+        """
+        SELECT ds.session_id, ds.order_id, ds.split_type, ds.created_at,
+               o.customer_id AS organizer_customer_id, o.total_amount, o.stall_id
+        FROM dining_session ds
+        JOIN orders o ON o.order_id = ds.order_id
+        WHERE ds.session_id = %s
+        """,
+        (session_id,),
+    )
+    session = cur.fetchone()
+    if not session:
+        return None
+    organizer_id = int(session["organizer_customer_id"])
+    cur.execute(
+        """
+        SELECT session_member_id, customer_id, share_amount, is_settled, settled_at
+        FROM session_member
+        WHERE session_id = %s
+        ORDER BY session_member_id
+        """,
+        (session_id,),
+    )
+    members = cur.fetchall()
+    member_rows = []
+    all_settled = True
+    for member in members:
+        is_organizer = int(member["customer_id"]) == organizer_id
+        settled = bool(member["is_settled"]) or is_organizer
+        if not settled:
+            all_settled = False
+        member_rows.append({
+            "session_member_id": member["session_member_id"],
+            "customer_id": member["customer_id"],
+            "share_amount": float(member["share_amount"]),
+            "is_organizer": is_organizer,
+            "is_settled": settled,
+            "settled_at": json_safe(member["settled_at"]),
+        })
+    return {
+        "product": "Makan split",
+        "session_id": session["session_id"],
+        "order_id": session["order_id"],
+        "stall_id": session["stall_id"],
+        "organizer_customer_id": organizer_id,
+        "total_amount": float(session["total_amount"]),
+        "stall_paid": True,
+        "split_type": session["split_type"],
+        "created_at": json_safe(session["created_at"]),
+        "all_settled": all_settled,
+        "members": member_rows,
+        "note": "one bill to the stall, settle among friends — wallet to organizer, not another stall pay",
+    }
+
+
+@app.post("/dining-sessions")
+def create_dining_session():
+    """Split a paid stall order among friends. Does not take another stall payment."""
+    body = request.get_json(silent=True) or {}
+    try:
+        order_id = int(body.get("order_id"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "order_id must be an integer"}), 400
+    split_type = (body.get("split_type") or "").strip().lower()
+    if split_type not in SPLIT_TYPES:
+        return jsonify({"error": "split_type must be equal, by_item, or custom"}), 400
+
+    conn = None
+    try:
+        conn = get_conn()
+        cur = conn.cursor(dictionary=True)
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT order_id, customer_id, status, total_amount
+            FROM orders
+            WHERE order_id = %s
+            FOR UPDATE
+            """,
+            (order_id,),
+        )
+        order = cur.fetchone()
+        if not order:
+            conn.rollback()
+            return jsonify({"error": "order not found"}), 404
+        if order["status"] != "paid":
+            conn.rollback()
+            return jsonify({"error": "only paid orders can be split"}), 400
+        cur.execute(
+            "SELECT session_id FROM dining_session WHERE order_id = %s",
+            (order_id,),
+        )
+        existing = cur.fetchone()
+        if existing:
+            conn.rollback()
+            return jsonify({
+                "error": "order already has a dining session",
+                "session_id": existing["session_id"],
+            }), 409
+
+        total = as_money(order["total_amount"])
+        organizer_id = int(order["customer_id"])
+
+        try:
+            if split_type == "equal":
+                raw_ids = body.get("customer_ids") or []
+                customer_ids = [int(cid) for cid in raw_ids]
+                if len(customer_ids) < 2:
+                    raise ValueError("equal split needs at least 2 customer_ids")
+                if len(set(customer_ids)) != len(customer_ids):
+                    raise ValueError("duplicate customer_id")
+                shares = _equal_shares(total, customer_ids)
+            elif split_type == "custom":
+                shares = _custom_shares(body.get("members") or [], total)
+            else:
+                cur.execute(
+                    """
+                    SELECT order_line_id, quantity, unit_price
+                    FROM order_line
+                    WHERE order_id = %s
+                    """,
+                    (order_id,),
+                )
+                lines = cur.fetchall()
+                shares = _by_item_shares(body.get("assignments") or [], lines, total)
+        except (TypeError, ValueError) as exc:
+            conn.rollback()
+            return jsonify({"error": str(exc)}), 400
+
+        member_ids = [s["customer_id"] for s in shares]
+        if organizer_id not in member_ids:
+            conn.rollback()
+            return jsonify({
+                "error": "organizer (order customer_id) must be a session member",
+            }), 400
+        placeholders = ",".join(["%s"] * len(member_ids))
+        cur.execute(
+            f"SELECT customer_id FROM customer WHERE customer_id IN ({placeholders})",
+            tuple(member_ids),
+        )
+        found = {int(r["customer_id"]) for r in cur.fetchall()}
+        missing = [cid for cid in member_ids if cid not in found]
+        if missing:
+            conn.rollback()
+            return jsonify({"error": f"unknown customer_id {missing[0]}"}), 400
+
+        cur.execute(
+            """
+            INSERT INTO dining_session (order_id, split_type)
+            VALUES (%s, %s)
+            """,
+            (order_id, split_type),
+        )
+        session_id = cur.lastrowid
+        for share in shares:
+            is_org = int(share["customer_id"]) == organizer_id
+            cur.execute(
+                """
+                INSERT INTO session_member
+                    (session_id, customer_id, share_amount, is_settled, settled_at)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (
+                    session_id,
+                    share["customer_id"],
+                    share["share_amount"],
+                    1 if is_org else 0,
+                    datetime.now(timezone.utc).replace(tzinfo=None) if is_org else None,
+                ),
+            )
+        conn.commit()
+        payload = _session_payload(cur, session_id)
+        cur.close()
+    except Error as exc:
+        if conn:
+            conn.rollback()
+        msg = str(exc)
+        if "dining_session" in msg.lower() and "exist" in msg.lower():
+            return jsonify({"error": "apply sql/schema/03_split.sql"}), 503
+        return jsonify({"error": msg}), 503
+    finally:
+        if conn:
+            conn.close()
+
+    return jsonify(payload), 201
+
+
+@app.get("/dining-sessions/<int:session_id>")
+def get_dining_session(session_id):
+    conn = None
+    try:
+        conn = get_conn()
+        cur = conn.cursor(dictionary=True)
+        payload = _session_payload(cur, session_id)
+        cur.close()
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+    finally:
+        if conn:
+            conn.close()
+    if not payload:
+        return jsonify({"error": "session not found"}), 404
+    return jsonify(payload)
+
+
+@app.get("/orders/<int:order_id>/dining-session")
+def dining_session_for_order(order_id):
+    """Lookup Makan split after pay — Kristen can GET this with the order_id."""
+    conn = None
+    try:
+        conn = get_conn()
+        cur = conn.cursor(dictionary=True)
+        cur.execute(
+            "SELECT session_id FROM dining_session WHERE order_id = %s",
+            (order_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            cur.close()
+            return jsonify({"error": "no makan split for this order"}), 404
+        payload = _session_payload(cur, row["session_id"])
+        cur.close()
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+    finally:
+        if conn:
+            conn.close()
+    if not payload:
+        return jsonify({"error": "session not found"}), 404
+    return jsonify(payload)
+
+
+@app.post("/dining-sessions/<int:session_id>/settle")
+def settle_dining_session(session_id):
+    """Friend pays their share to the organizer wallet. Not a stall checkout."""
+    body = request.get_json(silent=True) or {}
+    try:
+        customer_id = int(body.get("customer_id"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "customer_id must be an integer"}), 400
+
+    conn = None
+    try:
+        conn = get_conn()
+        cur = conn.cursor(dictionary=True)
+        conn.start_transaction()
+        cur.execute(
+            """
+            SELECT ds.session_id, ds.order_id, o.customer_id AS organizer_id
+            FROM dining_session ds
+            JOIN orders o ON o.order_id = ds.order_id
+            WHERE ds.session_id = %s
+            FOR UPDATE
+            """,
+            (session_id,),
+        )
+        session = cur.fetchone()
+        if not session:
+            conn.rollback()
+            return jsonify({"error": "session not found"}), 404
+        organizer_id = int(session["organizer_id"])
+        if customer_id == organizer_id:
+            conn.rollback()
+            return jsonify({
+                "error": "organizer already paid the stall; nothing to settle",
+            }), 400
+
+        cur.execute(
+            """
+            SELECT session_member_id, customer_id, share_amount, is_settled
+            FROM session_member
+            WHERE session_id = %s AND customer_id = %s
+            FOR UPDATE
+            """,
+            (session_id, customer_id),
+        )
+        member = cur.fetchone()
+        if not member:
+            conn.rollback()
+            return jsonify({"error": "customer is not in this makan split"}), 404
+        if member["is_settled"]:
+            conn.rollback()
+            return jsonify({"error": "share already settled"}), 409
+
+        share = as_money(member["share_amount"])
+        cur.execute(
+            "SELECT wallet_id, balance FROM wallet WHERE customer_id = %s FOR UPDATE",
+            (customer_id,),
+        )
+        friend_wallet = cur.fetchone()
+        cur.execute(
+            "SELECT wallet_id, balance FROM wallet WHERE customer_id = %s FOR UPDATE",
+            (organizer_id,),
+        )
+        org_wallet = cur.fetchone()
+        if not friend_wallet or not org_wallet:
+            conn.rollback()
+            return jsonify({"error": "both organizer and friend need a wallet"}), 400
+        friend_bal = as_money(friend_wallet["balance"])
+        if friend_bal < share:
+            conn.rollback()
+            return jsonify({"error": "insufficient wallet balance"}), 400
+
+        order_id = session["order_id"]
+        cur.execute(
+            """
+            INSERT INTO ledger_entry (wallet_id, order_id, entry_type, amount)
+            VALUES (%s, %s, 'split_settle', %s)
+            """,
+            (friend_wallet["wallet_id"], order_id, share),
+        )
+        cur.execute(
+            "UPDATE wallet SET balance = %s WHERE wallet_id = %s",
+            (friend_bal - share, friend_wallet["wallet_id"]),
+        )
+        cur.execute(
+            """
+            INSERT INTO ledger_entry (wallet_id, order_id, entry_type, amount)
+            VALUES (%s, %s, 'split_settle', %s)
+            """,
+            (org_wallet["wallet_id"], order_id, share),
+        )
+        cur.execute(
+            "UPDATE wallet SET balance = %s WHERE wallet_id = %s",
+            (as_money(org_wallet["balance"]) + share, org_wallet["wallet_id"]),
+        )
+        cur.execute(
+            """
+            UPDATE session_member
+            SET is_settled = 1, settled_at = %s
+            WHERE session_member_id = %s
+            """,
+            (datetime.now(timezone.utc).replace(tzinfo=None), member["session_member_id"]),
+        )
+        conn.commit()
+        payload = _session_payload(cur, session_id)
+        cur.close()
+    except Error as exc:
+        if conn:
+            conn.rollback()
+        return jsonify({"error": str(exc)}), 503
+    finally:
+        if conn:
+            conn.close()
+
+    return jsonify(payload)
 
 
 # ---------------------------------------------------------------------------

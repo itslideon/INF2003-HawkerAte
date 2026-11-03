@@ -11,7 +11,7 @@ Run the scripts in this order — later files assume earlier tables exist:
 
 1. `schema/01_core.sql` — centres, stalls, menu, customers, wallets
 2. `schema/02_fintech.sql` — orders, lines, payments, ledger
-3. `schema/03_split.sql` — group bill split (used later)
+3. `schema/03_split.sql` — YouTrip split (`dining_session` / `session_member`); after `02_fintech.sql`
 4. `schema/04_queue.sql` — stall line (`ticket_no`); after `02_fintech.sql`
 5. `views/*.sql`
 6. `indexes.sql`
@@ -27,7 +27,7 @@ mysql -u root -p hawkerate < sql/views/v_owner_takings.sql
 mysql -u root -p hawkerate < sql/indexes.sql
 ```
 
-Checkout (`POST /orders/pay`) needs `01_core.sql` **and** `02_fintech.sql`. Queue endpoints also need `04_queue.sql`. `test_inserts.sql` is optional and only after `01_core.sql`. Apply views then `indexes.sql` (`indexes.sql` expects `stall_queue` from `04_queue.sql`).
+Checkout (`POST /orders/pay`) needs `01_core.sql` **and** `02_fintech.sql`. Queue endpoints also need `04_queue.sql`. Split create (`POST /dining-sessions`) needs `03_split.sql`. `test_inserts.sql` is optional and only after `01_core.sql`. Apply views then `indexes.sql` (`indexes.sql` expects `stall_queue` from `04_queue.sql`).
 
 On Windows, if `mysqld` is not a service, start it with a quoted `--defaults-file=` (paths with spaces break if unquoted). Empty root password: omit `-p` or pass an empty one, matching `.env` `DB_PASSWORD`.
 
@@ -42,5 +42,5 @@ Only run that on a throwaway database — it writes real rows.
 - InnoDB, money as `DECIMAL(10,2)`, ids as `INT AUTO_INCREMENT`
 - One payment = one `START TRANSACTION … COMMIT`
 - Don’t update `wallet.balance` by itself in the live app; go through `ledger_entry`
-- Don’t delete ledger rows; a refund is a new reversing row
+- Don’t delete ledger rows; a refund is a new reversing row; Makan split settle is `entry_type=split_settle` (friend → organizer)
 - Stalls are soft-deleted (`is_deleted` / `deleted_at`)

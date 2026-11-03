@@ -20,6 +20,8 @@ Checkout (one MariaDB transaction, then a Mongo `payment_events` doc):
 
 - `POST /orders/pay` — if Mongo fails after SQL commit, SQL still stands and `mongo_written` is `false`. Response includes `queue` (`ticket_no`, `ahead`, `now_serving_ticket`).
 - `POST /orders/<id>/refund` — reversing `ledger_entry`, wallet credit, status `refunded`; never deletes payment/ledger. Mongo refund event after SQL (`mongo_written`). Drops the queue row.
+- `POST /dining-sessions` / `GET /dining-sessions/<id>` / `GET /orders/<id>/dining-session` — Makan split on a **paid** order (equal / by_item / custom).
+- `POST /dining-sessions/<id>/settle` — friend wallet → organizer (`split_settle` ledger). Not another stall pay. Apply `sql/schema/03_split.sql`.
 
 Queue (`stall_queue`, apply `sql/schema/04_queue.sql`):
 
@@ -34,7 +36,7 @@ Owner (apply `sql/views/v_owner_takings.sql` and `v_daily_settlement.sql`):
 
 Ids in Mongo are strings of the MariaDB ints (`1` → `"1"`). Request/response shapes: `docs/api-contract.md`.
 
-Not implemented here yet: dining sessions, admin summary, investor rank.
+Not implemented here yet: admin summary, investor rank.
 
 ## Setup
 
