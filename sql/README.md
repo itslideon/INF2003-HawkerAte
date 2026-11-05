@@ -24,6 +24,8 @@ mysql -u root -p hawkerate < sql/schema/03_split.sql
 mysql -u root -p hawkerate < sql/schema/04_queue.sql
 mysql -u root -p hawkerate < sql/views/v_daily_settlement.sql
 mysql -u root -p hawkerate < sql/views/v_owner_takings.sql
+mysql -u root -p hawkerate < sql/views/v_admin_centre_compare.sql
+mysql -u root -p hawkerate < sql/views/v_investor_rank.sql
 mysql -u root -p hawkerate < sql/indexes.sql
 ```
 

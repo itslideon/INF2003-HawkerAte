@@ -18,6 +18,12 @@ CREATE INDEX IF NOT EXISTS idx_menu_item_stall
 CREATE INDEX IF NOT EXISTS idx_ledger_wallet
     ON ledger_entry (wallet_id);
 
+CREATE INDEX IF NOT EXISTS idx_ledger_order_type
+    ON ledger_entry (order_id, entry_type);
+
+CREATE INDEX IF NOT EXISTS idx_orders_stall_status
+    ON orders (stall_id, status);
+
 CREATE INDEX IF NOT EXISTS idx_stall_centre_deleted
     ON stall (centre_id, is_deleted);
 
