@@ -39,9 +39,9 @@ Folder READMEs have the extra detail (Windows MariaDB, PowerShell `curl`, Atlas)
 
 ## Status
 
-**Working in the API:** browse centres/stalls/menu, stall reviews (Mongo), checkout `POST /orders/pay` (one MariaDB transaction, then a `payment_events` document), stall queue (`04_queue.sql`).
+**Working in the API:** browse centres/stalls/menu, stall reviews (Mongo), checkout `POST /orders/pay` (one MariaDB transaction, then a `payment_events` document), stall queue (`04_queue.sql`), owner takings and daily settlement, `GET /centres/<id>/admin-summary`, `GET /investor/rank`.
 
-**Not built yet:** refunds, dining-session split HTTP APIs, owner/admin/investor endpoints, ETL order generator (`etl/scripts/generate_orders.py` is still a stub).
+**Not built yet:** refunds, dining-session split HTTP APIs, ETL order generator (`etl/scripts/generate_orders.py` is still a stub).
 
 Ids: MariaDB `INT AUTO_INCREMENT`; Mongo stores the same values as strings (`"1"`).
 

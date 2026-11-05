@@ -33,7 +33,12 @@ Owner (apply `sql/views/v_owner_takings.sql` and `v_daily_settlement.sql`):
 
 Ids in Mongo are strings of the MariaDB ints (`1` → `"1"`). Request/response shapes: `docs/api-contract.md`.
 
-Not implemented here yet: refund, dining sessions, admin summary, investor rank.
+Centre admin and investor (read-only; apply `sql/views/v_admin_centre_compare.sql` and `v_investor_rank.sql`):
+
+- `GET /centres/<id>/admin-summary` — stalls in one centre from the view; ratings joined from Mongo when it is up
+- `GET /investor/rank` — centres ordered by takings
+
+Not implemented here yet: refund, dining sessions.
 
 ## Setup
 

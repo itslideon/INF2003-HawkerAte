@@ -73,11 +73,40 @@ GET /settlement?date=YYYY-MM-DD
 
 Omit `date` for `CURDATE()`. Empty `stalls: []` means no paid orders that day.
 
+## Centre admin (MariaDB view + Mongo ratings)
+
+Needs `sql/views/v_admin_centre_compare.sql`. Money columns are SQL. A stall with no paid orders has `revenue` 0, `avg_ticket` null, and `peak_hour` null.
+
+`avg_rating` and `low_rating` come from Mongo `reviews` (`stall_id` as a string, soft-deleted rows left out). `low_rating` is 1 when the average is below 3. If that stall has no reviews, `avg_rating` is null and `low_rating` is 0. If Mongo is down, `ratings_available` is false and those three rating fields are null.
+
+`peak_hour` is 0–23. `many_refunds` is 1 when the stall has more refund ledger rows than the average live stall in that centre.
+
+```
+GET /centres/:id/admin-summary
+  → { centre_id, centre_name, ratings_available,
+      stalls: [{ stall_id, stall_name, grade, cuisine_type,
+        revenue, avg_ticket, order_count, peak_hour,
+        refund_count, many_refunds,
+        avg_rating, review_count, low_rating }] }
+```
+
+Stalls are ordered by `revenue` descending. Unknown centre → 404. A real centre with no live stalls → `stalls: []`.
+
+## Investor (read-only MariaDB view)
+
+Needs `sql/views/v_investor_rank.sql`. Takings are the sum of `payment.amount` on paid orders. `cashless_pct` is PayNow + card as a percent of that sum, or null when takings are 0. Grades with no SFA letter are left out of the average, so `avg_grade` is null until grades are loaded. `avg_grade_score` is A=4 … D=1.
+
+```
+GET /investor/rank
+  → { centres: [{ centre_id, centre_name, stall_count,
+      total_takings, cashless_pct, avg_grade_score, avg_grade }] }
+```
+
+Ordered by `total_takings` descending. This route does not write anything.
+
 ## Later
 
 ```
 POST /orders/:id/refund
 POST /dining-sessions
-GET  /centres/:id/admin-summary
-GET  /investor/rank
 ```

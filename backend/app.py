@@ -212,6 +212,102 @@ def daily_settlement():
         return jsonify({"error": str(exc)}), 503
 
 
+LOW_RATING_BELOW = 3
+
+
+def review_averages_by_stall():
+    """Mongo review averages keyed by stall_id string. None if Mongo is down."""
+    try:
+        grouped = get_mongo_db().reviews.aggregate([
+            {"$match": {"is_deleted": False}},
+            {"$group": {
+                "_id": "$stall_id",
+                "avg_rating": {"$avg": "$rating"},
+                "review_count": {"$sum": 1},
+            }},
+        ])
+        averages = {}
+        for row in grouped:
+            if row.get("_id") is None or row.get("avg_rating") is None:
+                continue
+            averages[str(row["_id"])] = {
+                "avg_rating": round(float(row["avg_rating"]), 2),
+                "review_count": int(row["review_count"]),
+            }
+        return averages
+    except (PyMongoError, RuntimeError, TypeError, ValueError):
+        return None
+
+
+def with_ratings(stall_rows, averages):
+    enriched = []
+    for row in stall_rows:
+        item = dict(row)
+        stats = None if averages is None else averages.get(str(row["stall_id"]))
+        if stats:
+            item["avg_rating"] = stats["avg_rating"]
+            item["review_count"] = stats["review_count"]
+            item["low_rating"] = 1 if stats["avg_rating"] < LOW_RATING_BELOW else 0
+        else:
+            item["avg_rating"] = None
+            item["review_count"] = 0 if averages is not None else None
+            item["low_rating"] = 0 if averages is not None else None
+        enriched.append(item)
+    return enriched
+
+
+@app.get("/centres/<int:centre_id>/admin-summary")
+def centre_admin_summary(centre_id):
+    """Stalls in one centre from v_admin_centre_compare, plus Mongo ratings."""
+    try:
+        centre = fetch_one(
+            "SELECT centre_id, name FROM hawker_centre WHERE centre_id = %s",
+            (centre_id,),
+        )
+        if not centre:
+            return jsonify({"error": "centre not found"}), 404
+        rows = fetch_all(
+            """
+            SELECT
+                stall_id, stall_name, grade, cuisine_type,
+                revenue, avg_ticket, order_count, peak_hour,
+                refund_count, many_refunds
+            FROM v_admin_centre_compare
+            WHERE centre_id = %s
+            ORDER BY revenue DESC, stall_name
+            """,
+            (centre_id,),
+        )
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    averages = review_averages_by_stall()
+    return jsonify({
+        "centre_id": centre["centre_id"],
+        "centre_name": centre["name"],
+        "ratings_available": averages is not None,
+        "stalls": with_ratings(rows, averages),
+    })
+
+
+@app.get("/investor/rank")
+def investor_rank():
+    """Read-only centre ranking from v_investor_rank."""
+    try:
+        rows = fetch_all(
+            """
+            SELECT
+                centre_id, centre_name, stall_count,
+                total_takings, cashless_pct, avg_grade_score, avg_grade
+            FROM v_investor_rank
+            ORDER BY total_takings DESC, centre_name
+            """
+        )
+        return jsonify({"centres": rows})
+    except Error as exc:
+        return jsonify({"error": str(exc)}), 503
+
+
 @app.get("/stalls/<stall_id>/reviews")
 def reviews_for_stall(stall_id):
     """Non-deleted reviews for a stall, plus average rating."""

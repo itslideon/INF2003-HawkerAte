@@ -6,7 +6,9 @@ Uses SingStat CPI (hawker-centre series, 2024=100) to scale realistic
 menu_item prices by cuisine_type, instead of random numbers.
 
 Run AFTER load_centres_stalls.py has created stalls.
-Re-run is safe: stalls that already have menu rows are skipped.
+Re-run is safe: a dish already on that stall is left as-is.
+Stalls that only have a test row (for example Fried Rice) still receive
+the rest of their cuisine menu.
 """
 
 from __future__ import annotations
@@ -53,6 +55,10 @@ MENU_BY_CUISINE: dict[str, list[tuple[str, str]]] = {
         ("Char Kway Teow", "6.20"),
         ("Wanton Mee", "5.50"),
         ("Economic Rice (3 dishes)", "4.80"),
+        ("Fried Rice", "5.50"),
+        ("Hor Fun", "6.00"),
+        ("Laksa", "5.00"),
+        ("Roasted Meat Rice", "6.50"),
         ("Kopi", "1.50"),
     ],
     "Malay": [
@@ -60,6 +66,10 @@ MENU_BY_CUISINE: dict[str, list[tuple[str, str]]] = {
         ("Mee Rebus", "5.20"),
         ("Satay (10 sticks)", "8.00"),
         ("Mee Siam", "4.80"),
+        ("Ayam Penyet", "7.00"),
+        ("Lontong", "4.50"),
+        ("Mee Bandung", "5.50"),
+        ("Nasi Kerabu", "6.80"),
         ("Teh", "1.50"),
     ],
     "Indian": [
@@ -67,6 +77,10 @@ MENU_BY_CUISINE: dict[str, list[tuple[str, str]]] = {
         ("Chicken Biryani", "7.50"),
         ("Fish Head Curry (small)", "9.50"),
         ("Mee Goreng", "5.50"),
+        ("Thosai", "3.50"),
+        ("Murtabak", "6.50"),
+        ("Fish Curry Rice", "6.00"),
+        ("Naan with Curry", "7.20"),
         ("Teh Tarik", "1.80"),
     ],
     "Western": [
@@ -74,6 +88,10 @@ MENU_BY_CUISINE: dict[str, list[tuple[str, str]]] = {
         ("Chicken Chop", "8.00"),
         ("Spaghetti", "6.50"),
         ("Mixed Grill", "9.80"),
+        ("Cheeseburger", "7.50"),
+        ("Aglio Olio", "6.80"),
+        ("French Fries", "3.50"),
+        ("Mushroom Soup", "4.20"),
         ("Soft Drink", "1.80"),
     ],
     "Drinks": [
@@ -81,6 +99,10 @@ MENU_BY_CUISINE: dict[str, list[tuple[str, str]]] = {
         ("Teh", "1.40"),
         ("Kopi C", "1.60"),
         ("Iced Milo", "2.20"),
+        ("Bandung", "2.00"),
+        ("Barley", "1.80"),
+        ("Lemon Tea", "2.20"),
+        ("Honey Lemon", "2.50"),
         ("Soft Drink", "1.80"),
     ],
 }
@@ -207,25 +229,26 @@ def generate_menu_items_for_stalls(reference: dict | None = None) -> None:
         updated_cuisine = 0
         seeded_stalls = 0
         seeded_items = 0
-        skipped = 0
+        already_full = 0
         for stall_id, cuisine_type in stalls:
-            cur.execute(
-                "SELECT COUNT(*) FROM menu_item WHERE stall_id = %s",
-                (stall_id,),
-            )
-            if cur.fetchone()[0] > 0:
-                skipped += 1
-                continue
             cuisine = (cuisine_type or "").strip() or cuisine_for_stall(stall_id)
             if cuisine not in reference:
                 cuisine = cuisine_for_stall(stall_id)
-            if not cuisine_type:
+            if not (cuisine_type or "").strip():
                 cur.execute(
                     "UPDATE stall SET cuisine_type = %s WHERE stall_id = %s",
                     (cuisine, stall_id),
                 )
                 updated_cuisine += 1
+            cur.execute(
+                "SELECT name FROM menu_item WHERE stall_id = %s",
+                (stall_id,),
+            )
+            existing = {row[0] for row in cur.fetchall()}
+            added_here = 0
             for name, price in reference[cuisine]:
+                if name in existing:
+                    continue
                 cur.execute(
                     """
                     INSERT INTO menu_item (stall_id, name, price, is_available)
@@ -234,11 +257,15 @@ def generate_menu_items_for_stalls(reference: dict | None = None) -> None:
                     (stall_id, name, str(price)),
                 )
                 seeded_items += 1
-            seeded_stalls += 1
+                added_here += 1
+            if added_here:
+                seeded_stalls += 1
+            else:
+                already_full += 1
         conn.commit()
         print(
             f"menu_item: inserted {seeded_items} on {seeded_stalls} stalls; "
-            f"set cuisine_type on {updated_cuisine}; skipped {skipped} already filled"
+            f"set cuisine_type on {updated_cuisine}; {already_full} stalls already had the full menu"
         )
     finally:
         cur.close()
