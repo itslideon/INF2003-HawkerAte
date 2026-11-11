@@ -35,7 +35,8 @@ METHOD_WEIGHTS = {"paynow": 0.45, "card": 0.20, "cash": 0.35}
 METHODS = tuple(METHOD_WEIGHTS.keys())
 WEIGHTS = tuple(METHOD_WEIGHTS.values())
 SEED_WALLET = Decimal("500.00")
-DEFAULT_N = 200
+# Iter 3: thousands. Iter 4 load test is ~50k — do not use that as the default.
+DEFAULT_N = 2000
 
 
 def get_conn():
@@ -209,7 +210,7 @@ def run(n_orders: int) -> None:
             raise RuntimeError("no available menu_item rows — load prices / test_inserts first")
         conn.commit()
 
-        for _ in range(n_orders):
+        for i in range(n_orders):
             stall_id = random.choice(live)
             conn.start_transaction()
             try:
@@ -226,6 +227,8 @@ def run(n_orders: int) -> None:
             except mysql.connector.Error:
                 conn.rollback()
                 raise
+            if (i + 1) % 200 == 0 or (i + 1) == n_orders:
+                print(f"... {len(rows)}/{n_orders} committed")
     finally:
         cur.close()
         conn.close()

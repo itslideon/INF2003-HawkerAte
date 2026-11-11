@@ -716,6 +716,25 @@ def refund_order(order_id):
             conn.rollback()
             return jsonify({"error": "only paid orders can be refunded"}), 400
 
+        try:
+            cur.execute(
+                "SELECT session_id FROM dining_session WHERE order_id = %s FOR UPDATE",
+                (order_id,),
+            )
+            split = cur.fetchone()
+        except Error as exc:
+            if "dining_session" in str(exc).lower() and "exist" in str(exc).lower():
+                split = None
+            else:
+                conn.rollback()
+                return jsonify({"error": str(exc)}), 503
+        if split:
+            conn.rollback()
+            return jsonify({
+                "error": "cannot refund an order with a Makan split",
+                "session_id": split["session_id"],
+            }), 409
+
         customer_id = row["customer_id"]
         stall_id = row["stall_id"]
         method = row["method"]
@@ -1018,7 +1037,8 @@ def settle_dining_session(session_id):
         conn.start_transaction()
         cur.execute(
             """
-            SELECT ds.session_id, ds.order_id, o.customer_id AS organizer_id
+            SELECT ds.session_id, ds.order_id, o.customer_id AS organizer_id,
+                   o.status AS order_status
             FROM dining_session ds
             JOIN orders o ON o.order_id = ds.order_id
             WHERE ds.session_id = %s
@@ -1030,6 +1050,9 @@ def settle_dining_session(session_id):
         if not session:
             conn.rollback()
             return jsonify({"error": "session not found"}), 404
+        if session["order_status"] != "paid":
+            conn.rollback()
+            return jsonify({"error": "cannot settle a refunded order"}), 400
         organizer_id = int(session["organizer_id"])
         if customer_id == organizer_id:
             conn.rollback()

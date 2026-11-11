@@ -62,7 +62,7 @@ POST /orders/:id/refund
   → { order_id, status: "refunded", refund_amount, mongo_written }
 ```
 
-One MariaDB transaction: new `ledger_entry` (`entry_type=refund`), wallet credit, `orders.status=refunded`, leave `stall_queue`. Never `DELETE` `payment` or ledger rows. Mongo `payment_events` with `event_type=refund` and a **negative** `amount` is written only after SQL commit (`mongo_written` is `false` if Mongo fails). `409` if already refunded; only `paid` orders can be refunded.
+One MariaDB transaction: new `ledger_entry` (`entry_type=refund`), wallet credit, `orders.status=refunded`, leave `stall_queue`. Never `DELETE` `payment` or ledger rows. Mongo `payment_events` with `event_type=refund` and a **negative** `amount` is written only after SQL commit (`mongo_written` is `false` if Mongo fails). `409` if already refunded, or if the order has a Makan split (`dining_session`). Only `paid` orders can be refunded. Split first or refund first — not both.
 
 ## Owner (MariaDB views)
 
@@ -121,7 +121,7 @@ Session object (Kristen — Makan split UI):
 }
 ```
 
-Organizer must be a member and is `is_settled: true` at create (they already paid the stall). Custom / by_item shares must sum to `orders.total_amount`. `409` if the order already has a session, or that friend already settled. Settle moves wallets through `ledger_entry.entry_type=split_settle` (friend down, organizer up). No Mongo stall event. No second `POST /orders/pay`.
+Organizer must be a member and is `is_settled: true` at create (they already paid the stall). Custom / by_item shares must sum to `orders.total_amount`. `409` if the order already has a session, that friend already settled, or you refund an order that is already split. `400` if you settle after the stall order was refunded. Settle moves wallets through `ledger_entry.entry_type=split_settle` (friend down, organizer up). No Mongo stall event. No second `POST /orders/pay`.
 
 ## Centre admin (MariaDB view + Mongo ratings)
 

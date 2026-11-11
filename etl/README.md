@@ -9,11 +9,14 @@ python etl/scripts/load_centres_stalls.py
 python etl/scripts/load_prices.py
 ```
 
-2. After `sql/schema/02_fintech.sql`:
+2. After `sql/schema/02_fintech.sql` (and `04_queue.sql` so tickets can enqueue):
 
 ```bash
 python etl/scripts/generate_orders.py
+python etl/scripts/generate_orders.py 500
 ```
+
+Default is **2000** orders (Iter 3 thousands). Same pay rules as `POST /orders/pay`: one SQL transaction each, wallet only via `ledger_entry`. Pass a number to override. Do **not** default to 50k — that is Iter 4. The CSV is overwritten each run (`etl/raw/generated_orders.csv`, gitignored). After a big run, Wileen re-runs `generate_mongo_events.py` so reconcile can match.
 
 3. Then, so Mongo has a matching event for every generated order:
 

@@ -19,9 +19,9 @@ Reviews (Mongo):
 Checkout (one MariaDB transaction, then a Mongo `payment_events` doc):
 
 - `POST /orders/pay` — if Mongo fails after SQL commit, SQL still stands and `mongo_written` is `false`. Response includes `queue` (`ticket_no`, `ahead`, `now_serving_ticket`).
-- `POST /orders/<id>/refund` — reversing `ledger_entry`, wallet credit, status `refunded`; never deletes payment/ledger. Mongo refund event after SQL (`mongo_written`). Drops the queue row.
+- `POST /orders/<id>/refund` — reversing `ledger_entry`, wallet credit, status `refunded`; never deletes payment/ledger. Mongo refund event after SQL (`mongo_written`). Drops the queue row. `409` if the order already has a Makan split.
 - `POST /dining-sessions` / `GET /dining-sessions/<id>` / `GET /orders/<id>/dining-session` — Makan split on a **paid** order (equal / by_item / custom).
-- `POST /dining-sessions/<id>/settle` — friend wallet → organizer (`split_settle` ledger). Not another stall pay. Apply `sql/schema/03_split.sql`.
+- `POST /dining-sessions/<id>/settle` — friend wallet → organizer (`split_settle` ledger). Not another stall pay. `400` if the stall order is no longer `paid`. Apply `sql/schema/03_split.sql`.
 
 Queue (`stall_queue`, apply `sql/schema/04_queue.sql`):
 
