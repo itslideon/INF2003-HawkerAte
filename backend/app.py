@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from mysql.connector import Error
+from bson import ObjectId
 from pymongo.errors import PyMongoError
 
 from db import get_conn
@@ -462,6 +463,70 @@ def create_review():
         "customer_id": customer_id,
         "rating": rating,
     }), 201
+
+
+@app.put("/reviews/<review_id>")
+def update_review(review_id):
+    """Edit your own review's rating and/or comment."""
+    body = request.get_json(silent=True) or {}
+    customer_id = as_id_str(body.get("customer_id", ""))
+    if not customer_id:
+        return jsonify({"error": "customer_id is required"}), 400
+
+    changes = {}
+    if "rating" in body:
+        try:
+            rating = int(body["rating"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "rating must be an integer 1–5"}), 400
+        if rating < 1 or rating > 5:
+            return jsonify({"error": "rating must be 1–5"}), 400
+        changes["rating"] = rating
+    if "comment" in body:
+        if not isinstance(body["comment"], str):
+            return jsonify({"error": "comment must be a string"}), 400
+        changes["comment"] = body["comment"]
+    if not changes:
+        return jsonify({"error": "send rating and/or comment"}), 400
+    changes["updated_at"] = datetime.now(timezone.utc)
+
+    try:
+        oid = ObjectId(review_id)
+    except Exception:
+        return jsonify({"error": "invalid review id"}), 400
+    try:
+        result = get_mongo_db().reviews.update_one(
+            {"_id": oid, "customer_id": customer_id, "is_deleted": False},
+            {"$set": changes},
+        )
+    except (PyMongoError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 503
+    if result.matched_count == 0:
+        return jsonify({"error": "review not found, or not yours"}), 404
+    return jsonify({"ok": True, "id": review_id})
+
+
+@app.delete("/reviews/<review_id>")
+def delete_review(review_id):
+    """Soft delete: flips is_deleted, the document stays in Mongo."""
+    body = request.get_json(silent=True) or {}
+    customer_id = as_id_str(body.get("customer_id") or request.args.get("customer_id", ""))
+    if not customer_id:
+        return jsonify({"error": "customer_id is required"}), 400
+    try:
+        oid = ObjectId(review_id)
+    except Exception:
+        return jsonify({"error": "invalid review id"}), 400
+    try:
+        result = get_mongo_db().reviews.update_one(
+            {"_id": oid, "customer_id": customer_id, "is_deleted": False},
+            {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc)}},
+        )
+    except (PyMongoError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 503
+    if result.matched_count == 0:
+        return jsonify({"error": "review not found, or not yours"}), 404
+    return jsonify({"ok": True, "id": review_id, "is_deleted": True})
 
 
 def _write_payment_event(order_id, stall_id, customer_id, amount, method, extras=None):
@@ -1235,6 +1300,36 @@ def payments_reconcile():
             "match": match,
         })
     return jsonify({"all_match": all_ok, "stalls": result})
+
+
+@app.get("/analytics/payments/net-by-stall")
+def payments_net_by_stall():
+    """Gross, refunded and net per stall, from Mongo. Refund events store negative amounts."""
+    try:
+        docs = list(get_mongo_db().payment_events.aggregate([
+            {"$group": {
+                "_id": "$stall_id",
+                "gross": {"$sum": {"$cond": [{"$eq": ["$event_type", "payment"]}, "$amount", 0]}},
+                "refunded": {"$sum": {"$cond": [{"$eq": ["$event_type", "refund"]}, "$amount", 0]}},
+                "net": {"$sum": "$amount"},
+                "payment_count": {"$sum": {"$cond": [{"$eq": ["$event_type", "payment"]}, 1, 0]}},
+                "refund_count": {"$sum": {"$cond": [{"$eq": ["$event_type", "refund"]}, 1, 0]}},
+            }},
+            {"$sort": {"net": -1}},
+        ]))
+    except (PyMongoError, RuntimeError) as exc:
+        return jsonify({"error": str(exc)}), 503
+    return jsonify([
+        {
+            "stall_id": d["_id"],
+            "gross": round(d["gross"], 2),
+            "refunded": round(-d["refunded"], 2),
+            "net": round(d["net"], 2),
+            "payment_count": d["payment_count"],
+            "refund_count": d["refund_count"],
+        }
+        for d in docs
+    ])
 
 
 @app.get("/stalls/<int:stall_id>/queue")
