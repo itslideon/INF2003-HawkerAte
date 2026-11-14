@@ -12,7 +12,7 @@ __pycache__/
 INF2003_project_description.pdf
 DATABASEPROJ.md
 docs/progress-report/progress_report.md
-docs/video-script/lideon_beat.md
+docs/video-script/
 
 # large / official raw downloads — note the download date in etl/raw/README.md instead
 etl/raw/*
