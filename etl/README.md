@@ -18,6 +18,8 @@ python etl/scripts/generate_orders.py 500
 
 Default is **2000** orders (Iter 3 thousands). Same pay rules as `POST /orders/pay`: one SQL transaction each, wallet only via `ledger_entry`. Pass a number to override. Do **not** default to 50k — that is Iter 4. The CSV is overwritten each run (`etl/raw/generated_orders.csv`, gitignored). After a big run, Wileen re-runs `generate_mongo_events.py` so reconcile can match.
 
+`created_at` is stored UTC but **picked in Singapore time**: bigger lunch rush 12:00–14:00, smaller dinner 18:00–20:00, light traffic the rest of 07:00–21:00. That is so Mongo payments-by-hour is not one spike. Old rows keep their old timestamps until you generate new ones.
+
 3. Then, so Mongo has a matching event for every generated order:
 
 ```bash

@@ -21,6 +21,7 @@ import sys
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import mysql.connector
 from dotenv import load_dotenv
@@ -37,6 +38,17 @@ WEIGHTS = tuple(METHOD_WEIGHTS.values())
 SEED_WALLET = Decimal("500.00")
 # Iter 3: thousands. Iter 4 load test is ~50k — do not use that as the default.
 DEFAULT_N = 2000
+# Hawker hours in Singapore. Lunch 12–2 biggest, dinner 6–8 smaller.
+# Stored on the order as UTC so Mongo payments-by-hour matches SGT clocks.
+SGT = ZoneInfo("Asia/Singapore")
+HOUR_WEIGHTS = {
+    7: 1, 8: 1, 9: 1, 10: 1, 11: 2,
+    12: 10, 13: 10, 14: 2,
+    15: 1, 16: 1, 17: 2,
+    18: 5, 19: 5, 20: 2, 21: 1,
+}
+_HOUR_CHOICES = tuple(HOUR_WEIGHTS.keys())
+_HOUR_WEIGHT_VALS = tuple(HOUR_WEIGHTS.values())
 
 
 def get_conn():
@@ -51,6 +63,19 @@ def get_conn():
 
 def _pick_method() -> str:
     return random.choices(METHODS, weights=WEIGHTS, k=1)[0]
+
+
+def _pick_created_at() -> datetime:
+    """UTC datetime whose Singapore clock sits in a hawker rush hour."""
+    now_sgt = datetime.now(SGT)
+    hour = random.choices(_HOUR_CHOICES, weights=_HOUR_WEIGHT_VALS, k=1)[0]
+    local = now_sgt.replace(
+        hour=hour,
+        minute=random.randint(0, 59),
+        second=random.randint(0, 59),
+        microsecond=0,
+    )
+    return local.astimezone(timezone.utc)
 
 
 def _load_menus(cur) -> dict[int, list[dict]]:
@@ -144,7 +169,7 @@ def generate_order(cur, stall_id: int, dishes: list[dict]) -> dict:
         raise RuntimeError("wallet could not cover generated order")
 
     method = _pick_method()
-    created = datetime.now(timezone.utc)
+    created = _pick_created_at()
     created_sql = created.replace(tzinfo=None)
     cur.execute(
         """
