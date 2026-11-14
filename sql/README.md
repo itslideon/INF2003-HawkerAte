@@ -11,7 +11,7 @@ Run the scripts in this order — later files assume earlier tables exist:
 
 1. `schema/01_core.sql` — centres, stalls, menu, customers, wallets
 2. `schema/02_fintech.sql` — orders, lines, payments, ledger
-3. `schema/03_split.sql` — YouTrip split (`dining_session` / `session_member`); after `02_fintech.sql`
+3. `schema/03_split.sql` — YouTrip split (`dining_session` / `session_member`), plus `chk_session_member_settled` and `chk_ledger_amount`; after `02_fintech.sql`
 4. `schema/04_queue.sql` — stall line (`ticket_no`); after `02_fintech.sql`
 5. `views/*.sql`
 6. `indexes.sql`

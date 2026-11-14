@@ -35,3 +35,16 @@ ALTER TABLE session_member
 -- Friend settle is a ledger movement, not a stall payment/refund.
 ALTER TABLE ledger_entry
     MODIFY COLUMN entry_type ENUM('payment','refund','split_settle') NOT NULL;
+
+-- settled_at is set exactly when is_settled = 1 (organizer row is
+-- inserted already settled; settle sets both together).
+ALTER TABLE session_member
+    ADD CONSTRAINT IF NOT EXISTS chk_session_member_settled CHECK (
+        (is_settled = 0 AND settled_at IS NULL)
+        OR (is_settled = 1 AND settled_at IS NOT NULL)
+    );
+
+-- Ledger amounts are stored positive; direction comes from entry_type
+-- (and which wallet). A refund is a new reversing row, never a negative edit.
+ALTER TABLE ledger_entry
+    ADD CONSTRAINT IF NOT EXISTS chk_ledger_amount CHECK (amount > 0);
