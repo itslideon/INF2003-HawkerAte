@@ -2,6 +2,8 @@
 
 The diagram is `er.png`. Keep the draw.io source next to it as `er.drawio`.
 
+Shared copy on Google Drive: https://drive.google.com/file/d/1ixQT91R69X6tEYdKAMtS_ilDM08dKmtI/view?usp=sharing
+
 It covers every table in the four schema files:
 
 | Colour / legend | File | Tables |
