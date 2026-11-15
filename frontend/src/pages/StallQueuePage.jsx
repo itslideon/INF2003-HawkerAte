@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Navigation from '../components/Navigation.jsx'
 import Reveal from '../components/Reveal.jsx'
+import StallSwitcher from '../components/StallSwitcher.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import { getStallQueue, markOrderReady } from '../lib/queueApi.js'
 
@@ -120,6 +121,7 @@ export default function StallQueuePage() {
             Press Ready / collected when an order is handed over. It leaves the line and the next ticket moves up on the
             diner's screen.
           </p>
+          <StallSwitcher />
         </Reveal>
 
         {queue && (

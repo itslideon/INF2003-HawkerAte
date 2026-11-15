@@ -6,7 +6,6 @@ import BackToTop from '../components/BackToTop.jsx'
 import Home from '../sections/Home.jsx'
 import HowItWorks from '../sections/HowItWorks.jsx'
 import About from '../sections/About.jsx'
-import Testimonials from '../sections/Testimonials.jsx'
 import Order from '../sections/Order.jsx'
 import LiveStats from '../sections/LiveStats.jsx'
 import Insights from '../sections/Insights.jsx'
@@ -35,7 +34,6 @@ export default function MainSite() {
       <Home />
       <HowItWorks />
       <About />
-      <Testimonials />
       <Order />
       <LiveStats />
       <Insights />

@@ -67,18 +67,6 @@ export default function Footer() {
           <div className="flex flex-col items-start gap-3">
             <p className="text-xs font-bold uppercase text-white/40">Get in touch</p>
             <a
-              href="mailto:hello@hawkerate.sg"
-              className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"
-            >
-              hello@hawkerate.sg
-            </a>
-            <a
-              href="tel:+6561234567"
-              className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"
-            >
-              +65 6123 4567
-            </a>
-            <a
               href="#contact"
               onClick={(event) => scrollToSection(event, 'contact')}
               className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"

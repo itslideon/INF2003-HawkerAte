@@ -4,7 +4,7 @@ const steps = [
   {
     number: '01',
     title: 'Browse the stalls',
-    description: "Explore hawker centres near you and see what's cooking right now.",
+    description: "Pick a hawker centre and a stall, and see what's on the menu.",
   },
   {
     number: '02',

@@ -2,14 +2,17 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getCentres, getMenu, getStalls } from '../lib/browseApi.js'
 
 const MenuContext = createContext(null)
+const CENTRE_KEY = 'hawkerate.centre'
 
-// Shows the first centre. Chains GET /centres -> GET /centres/:id/stalls -> GET /stalls/:id/menu
-// once on load (first stall opens by default); selectStall() then loads any other stall in the
-// centre. `status` drives what the UI shows, never fall back to fake dishes, per the "no
-// hardcoded fake stalls" rule. `switching` is true while a newly picked stall's menu loads, and
-// `switchError` is set if that menu could not be loaded (the previous stall stays on screen).
+// Browse state for the whole app: GET /centres -> GET /centres/:id/stalls -> GET /stalls/:id/menu.
+// The first centre (by name) opens by default, or the one the diner last picked. selectCentre()
+// and selectStall() switch to another one. `status` drives what the UI shows, never fall back to
+// fake dishes, per the "no hardcoded fake stalls" rule. `switching` is true while a newly picked
+// centre or stall loads, and `switchError` is set if that load failed (the previous choice stays
+// on screen).
 const INITIAL_STATE = {
   status: 'loading',
+  centres: [],
   centre: null,
   stalls: [],
   stall: null,
@@ -18,9 +21,36 @@ const INITIAL_STATE = {
   switchError: false,
 }
 
+function savedCentreId() {
+  try {
+    return Number(localStorage.getItem(CENTRE_KEY)) || null
+  } catch {
+    return null
+  }
+}
+
+function rememberCentre(centreId) {
+  try {
+    localStorage.setItem(CENTRE_KEY, String(centreId))
+  } catch {
+    // storage unavailable, the choice just won't survive a refresh
+  }
+}
+
+// Stalls of one centre, with the first stall's menu. null = the API failed.
+async function loadCentre(centre) {
+  const stalls = await getStalls(centre.centre_id)
+  if (!stalls) return null
+  if (stalls.length === 0) return { status: 'empty', stalls, stall: null, dishes: [] }
+  const stall = stalls[0]
+  const dishes = await getMenu(stall.stall_id)
+  if (!dishes) return null
+  return { status: dishes.length ? 'ready' : 'empty', stalls, stall, dishes }
+}
+
 export function MenuProvider({ children }) {
   const [state, setState] = useState(INITIAL_STATE)
-  const requestId = useRef(0) // ignore a menu response if the diner has since picked another stall
+  const requestId = useRef(0) // ignore a response if the diner has since picked something else
 
   useEffect(() => {
     let cancelled = false
@@ -32,16 +62,11 @@ export function MenuProvider({ children }) {
       const centres = await getCentres()
       if (!centres) return set({ status: 'unavailable' })
       if (centres.length === 0) return set({ status: 'empty' })
-      const centre = centres[0]
+      const centre = centres.find((c) => c.centre_id === savedCentreId()) ?? centres[0]
 
-      const stalls = await getStalls(centre.centre_id)
-      if (!stalls) return set({ status: 'unavailable', centre })
-      if (stalls.length === 0) return set({ status: 'empty', centre })
-      const stall = stalls[0]
-
-      const dishes = await getMenu(stall.stall_id)
-      if (!dishes) return set({ status: 'unavailable', centre, stalls, stall })
-      set({ status: dishes.length ? 'ready' : 'empty', centre, stalls, stall, dishes })
+      const loaded = await loadCentre(centre)
+      if (!loaded) return set({ status: 'unavailable', centres, centre })
+      set({ ...loaded, centres, centre })
     }
 
     load()
@@ -52,6 +77,21 @@ export function MenuProvider({ children }) {
 
   const latest = useRef(state)
   latest.current = state
+
+  const selectCentre = useCallback(async (centreId) => {
+    const target = latest.current.centres.find((c) => c.centre_id === centreId)
+    if (!target || target.centre_id === latest.current.centre?.centre_id) return
+    const myRequest = ++requestId.current
+    setState((prev) => ({ ...prev, switching: true, switchError: false }))
+    const loaded = await loadCentre(target)
+    if (myRequest !== requestId.current) return
+    if (!loaded) {
+      setState((prev) => ({ ...prev, switching: false, switchError: true }))
+      return
+    }
+    rememberCentre(target.centre_id)
+    setState((prev) => ({ ...prev, ...loaded, centre: target, switching: false }))
+  }, [])
 
   const selectStall = useCallback(async (stallId) => {
     const target = latest.current.stalls.find((s) => s.stall_id === stallId)
@@ -67,7 +107,7 @@ export function MenuProvider({ children }) {
     )
   }, [])
 
-  const value = useMemo(() => ({ ...state, selectStall }), [state, selectStall])
+  const value = useMemo(() => ({ ...state, selectCentre, selectStall }), [state, selectCentre, selectStall])
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>
 }

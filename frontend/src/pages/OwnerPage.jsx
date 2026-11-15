@@ -4,6 +4,7 @@ import Navigation from '../components/Navigation.jsx'
 import Reveal from '../components/Reveal.jsx'
 import Button from '../components/Button.jsx'
 import RefundPanel from '../components/RefundPanel.jsx'
+import StallSwitcher from '../components/StallSwitcher.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import { getStallTakings } from '../lib/ownerApi.js'
 
@@ -51,6 +52,7 @@ export default function OwnerPage() {
             <p className="text-base leading-[1.5] text-muted">
               Totals come from MariaDB (v_owner_takings), not a placeholder on this page.
             </p>
+            <StallSwitcher />
           </div>
           <div className="flex flex-wrap gap-3">
             <Button variant="light" onClick={load}>

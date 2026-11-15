@@ -108,14 +108,55 @@ function QuantityStepper({ quantity, onAdd, onRemove, dishName, maxQuantity, dis
   )
 }
 
-function StatusMessage({ title, body }) {
+function StatusMessage({ title, body, children }) {
   return (
-    <section id="order" className="flex w-full flex-col items-start bg-cream px-4 py-8 sm:px-8 lg:px-12">
+    <section id="order" className="flex w-full flex-col items-start gap-4 bg-cream px-4 py-8 sm:px-8 lg:px-12">
       <Reveal className="flex w-full flex-col items-start gap-1 rounded-2xl bg-surface p-6">
         <p className="text-sm font-bold text-ink">{title}</p>
         <p className="text-xs text-muted">{body}</p>
       </Reveal>
+      {children}
     </section>
+  )
+}
+
+// Which hawker centre to order from (GET /centres, sorted by name). Hidden when there is only one.
+// Switching centre loads that centre's stalls, so a basket for the old stall is dropped first.
+function CentrePicker({ hasBasket }) {
+  const { centres, centre, selectCentre, switching, switchError } = useMenu()
+  if (centres.length < 2) return null
+
+  const onChange = (event) => {
+    const centreId = Number(event.target.value)
+    if (hasBasket && !window.confirm('Switching centre will empty your basket. Continue?')) return
+    selectCentre(centreId)
+  }
+
+  return (
+    <div className="flex w-full flex-col items-start gap-2">
+      <label htmlFor="centre-picker" className="text-[11px] font-bold uppercase text-muted">
+        Choose a hawker centre
+      </label>
+      <select
+        id="centre-picker"
+        value={centre?.centre_id ?? ''}
+        onChange={onChange}
+        disabled={switching}
+        className="w-full max-w-[420px] rounded-full bg-surface px-4 py-2.5 text-[13px] font-semibold text-ink outline-none disabled:cursor-wait disabled:opacity-50"
+      >
+        {centres.map((option) => (
+          <option key={option.centre_id} value={option.centre_id}>
+            {option.name}
+          </option>
+        ))}
+      </select>
+      {switching && <p className="text-xs text-muted">Loading the centre…</p>}
+      {switchError && (
+        <p role="alert" className="text-xs font-semibold text-coral">
+          Couldn't load that centre. Still showing {centre?.name}. Try again.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -150,7 +191,11 @@ export default function Order() {
 
   // No stall at all. (A stall whose menu is empty still renders below, so the diner can pick another.)
   if (!stall) {
-    return <StatusMessage title="No stalls or dishes yet" body="Check back once the centres/stalls are seeded." />
+    return (
+      <StatusMessage title="No stalls or dishes yet" body="This centre has no stalls loaded. Try another centre.">
+        <CentrePicker hasBasket={false} />
+      </StatusMessage>
+    )
   }
 
   const pickStall = (stallId) => {
@@ -181,6 +226,8 @@ export default function Order() {
               />
             </div>
           </Reveal>
+
+          <CentrePicker hasBasket={itemCount > 0} />
 
           {stalls.length > 1 && (
             <Reveal delay={50} className="flex w-full flex-col items-start gap-2">

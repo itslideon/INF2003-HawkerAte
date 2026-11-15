@@ -41,7 +41,11 @@ export default function CheckoutPage() {
     })
     setSubmitting(false)
     if (!result.ok) {
-      setError(result.error)
+      setError(
+        /insufficient/i.test(result.error)
+          ? `The demo wallet (customer ${DEMO_CUSTOMER_ID}) doesn't have enough balance for this order. Choose a cheaper dish, or set VITE_DEMO_CUSTOMER_ID in frontend/.env to a customer with a funded wallet.`
+          : result.error,
+      )
       return
     }
 

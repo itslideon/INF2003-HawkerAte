@@ -1,14 +1,39 @@
+import { useEffect, useState } from 'react'
 import Button from '../components/Button.jsx'
 import Reveal from '../components/Reveal.jsx'
 import heroDish from '../assets/home-hero-dish.png'
+import { useMenu } from '../context/MenuContext.jsx'
+import { getCentres } from '../lib/browseApi.js'
 
-const stats = [
-  { value: '120+', label: 'curated stalls' },
-  { value: '4.8/5', label: 'average rating' },
-  { value: '18 min', label: 'average pickup' },
-]
-
+// Real counts only: GET /centres, and the stalls and menu the Order section already loaded.
+// "—" while loading or when the API is unreachable. Average rating and pickup time are not
+// tracked anywhere, so they are not shown (the old copy had invented 4.8/5 and 18 min).
 export default function Home() {
+  const { centre, stalls, stall, dishes } = useMenu()
+  const [centreCount, setCentreCount] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getCentres().then((list) => {
+      if (!cancelled && Array.isArray(list)) setCentreCount(list.length)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const stats = [
+    { value: centreCount ?? '—', label: 'hawker centres' },
+    {
+      value: centre ? stalls.length : '—',
+      label: centre ? `${stalls.length === 1 ? 'stall' : 'stalls'} at ${centre.name}` : 'stalls',
+    },
+    {
+      value: stall ? dishes.length : '—',
+      label: stall ? `${dishes.length === 1 ? 'dish' : 'dishes'} at ${stall.name}` : 'dishes',
+    },
+  ]
+
   return (
     <section id="home" className="flex w-full flex-col items-start bg-cream">
       <div className="flex w-full flex-col items-start gap-8 px-4 pb-8 pt-8 sm:px-8 sm:pt-10 lg:flex-row lg:gap-[46px] lg:px-12 lg:pb-[42px] lg:pl-16 lg:pt-[54px]">
@@ -39,8 +64,12 @@ export default function Home() {
         >
           <img src={heroDish} alt="Hawker dish spread" className="h-full w-full object-cover" />
           <div className="absolute bottom-6 left-6 flex flex-col gap-1 rounded-2xl bg-white p-4">
-            <p className="text-base font-bold text-ink">Maxwell classics</p>
-            <p className="text-xs text-muted">12 stalls • 20–30 min</p>
+            <p className="text-base font-bold text-ink">{centre ? centre.name : 'Hawker centres'}</p>
+            {centre && (
+              <p className="text-xs text-muted">
+                {stalls.length} stall{stalls.length === 1 ? '' : 's'}
+              </p>
+            )}
           </div>
         </Reveal>
       </div>

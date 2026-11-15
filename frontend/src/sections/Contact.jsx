@@ -18,8 +18,12 @@ export default function Contact() {
     setForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
+  const [sent, setSent] = useState(false)
+
+  // Nothing receives this form (there is no mail route), so say so instead of pretending.
   const submitForm = (event) => {
     event.preventDefault()
+    setSent(true)
   }
 
   return (
@@ -30,19 +34,14 @@ export default function Contact() {
             <p className="text-xs font-bold uppercase text-coral">Talk to us</p>
             <h2 className="text-[32px] font-extrabold leading-[1.1] text-ink sm:text-[46px] sm:leading-[1.05]">Let's share a table.</h2>
             <p className="text-base leading-[1.5] text-muted">
-              Questions about an order, a stall recommendation, or bringing your business onto
-              HawkerAte? We'd love to hear from you.
+              Questions or feedback about the project? Leave a note below.
             </p>
           </div>
 
-          <div className="flex flex-col items-start gap-4">
-            <p className="text-base font-bold text-ink">hello@hawkerate.sg</p>
-            <p className="text-base font-bold text-ink">+65 6123 4567</p>
-            <div className="text-sm leading-[1.5] text-muted">
-              <p>Daily, 9:00 am–9:00 pm</p>
-              <p>Tanjong Pagar, Singapore</p>
-            </div>
-          </div>
+          <p className="text-sm leading-[1.5] text-muted">
+            HawkerAte is a student project for INF2003 Database Systems, so there is no support desk, phone line or
+            shop address. The form on this page is a demo and does not send anything.
+          </p>
         </Reveal>
 
         <Reveal
@@ -83,6 +82,11 @@ export default function Contact() {
             />
           </label>
           <Button variant="lime">Send message</Button>
+          {sent && (
+            <p role="status" className="text-sm font-semibold text-ink">
+              This is a demo site, so your message was not sent anywhere.
+            </p>
+          )}
         </Reveal>
       </div>
     </section>

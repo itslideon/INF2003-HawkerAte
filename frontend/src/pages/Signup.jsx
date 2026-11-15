@@ -4,6 +4,7 @@ import Navigation from '../components/Navigation.jsx'
 import Button from '../components/Button.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import DemoNotice from '../components/DemoNotice.jsx'
 
 export default function Signup() {
   const { signIn } = useAuth()
@@ -50,6 +51,7 @@ export default function Signup() {
           className="flex w-full max-w-[470px] flex-col items-start gap-[18px] rounded-3xl bg-surface p-6 sm:p-8 lg:shrink-0"
         >
           <p className="text-2xl font-extrabold text-ink">Create your account</p>
+          <DemoNotice className="w-full" />
           <div className="flex w-full flex-col gap-[18px] sm:flex-row">
             <label className="flex h-[60px] w-full flex-col items-start gap-1 rounded-lg border border-border px-[15px] py-2.5">
               <span className="text-[11px] font-bold text-muted">FIRST NAME</span>

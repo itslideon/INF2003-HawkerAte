@@ -6,13 +6,9 @@ import Button from '../components/Button.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useOrderTracker } from '../context/OrderTrackerContext.jsx'
 import { getOrdersForUser, paymentMethodLabel } from '../lib/orderStore.js'
+import DemoNotice from '../components/DemoNotice.jsx'
+import StallRating from '../components/StallRating.jsx'
 import accountAvatar from '../assets/account-avatar.svg'
-
-const favourites = [
-  { name: 'Tian Tian Chicken Rice', rating: '4.9' },
-  { name: '328 Katong Laksa', rating: '4.8' },
-  { name: 'Outram Park Fried Kway Teow', rating: '4.8' },
-]
 
 export default function Account() {
   const { user } = useAuth()
@@ -25,7 +21,20 @@ export default function Account() {
 
   if (!user) return null
 
-  const latestOrder = getOrdersForUser(user.customer_id)[0]
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+
+  const orders = getOrdersForUser(user.customer_id)
+  const latestOrder = orders[0]
+
+  // Stalls this account has really ordered from, most-ordered first. No invented favourites.
+  const stallCounts = new Map()
+  for (const order of orders) {
+    const entry = stallCounts.get(order.stall_id) ?? { stall_id: order.stall_id, name: order.stall_name, count: 0 }
+    entry.count += 1
+    stallCounts.set(order.stall_id, entry)
+  }
+  const orderedStalls = [...stallCounts.values()].sort((a, b) => b.count - a.count).slice(0, 5)
 
   return (
     <div className="flex min-h-screen w-full flex-col items-start bg-cream">
@@ -35,11 +44,12 @@ export default function Account() {
           <div className="flex w-full max-w-[620px] flex-col items-start gap-3">
             <p className="text-xs font-bold uppercase text-coral">Your table</p>
             <h1 className="text-[32px] font-extrabold leading-[1.05] text-ink sm:text-[46px]">
-              Good evening, {user.name.split(' ')[0]}.
+              {greeting}, {user.name.split(' ')[0]}.
             </h1>
             <p className="text-base leading-[1.5] text-muted">
               Manage your details, favourite stalls, and everything you've ordered.
             </p>
+            <DemoNotice />
           </div>
           <Button variant="dark" onClick={() => navigate('/account/edit')}>
             Edit account
@@ -54,12 +64,15 @@ export default function Account() {
             <img src={accountAvatar} alt="" className="size-16" />
             <p className="text-2xl font-extrabold text-white">{user.name}</p>
             <p className="text-sm text-white/73">{user.email}</p>
-            <div className="h-px w-full bg-white/20" />
-            <p className="text-[13px] text-lime">HAWKERATE MEMBER SINCE 2024</p>
-            <div className="text-sm text-white">
-              <p>8 Tanjong Pagar Plaza</p>
-              <p>Singapore 081008</p>
-            </div>
+            {(user.phone || user.address) && (
+              <>
+                <div className="h-px w-full bg-white/20" />
+                <div className="text-sm text-white">
+                  {user.phone && <p>{user.phone}</p>}
+                  {user.address && <p>{user.address}</p>}
+                </div>
+              </>
+            )}
             <button
               type="button"
               onClick={() => navigate('/logout')}
@@ -117,13 +130,20 @@ export default function Account() {
             </Reveal>
 
             <Reveal delay={200} className="flex w-full flex-col items-start gap-3.5 rounded-3xl bg-surface p-6">
-              <p className="text-xl font-extrabold text-ink">Favourite stalls</p>
-              {favourites.map((stall) => (
-                <div key={stall.name} className="flex w-full items-start justify-between text-sm">
-                  <p className="text-muted">{stall.name}</p>
-                  <p className="font-bold text-ink">★ {stall.rating}</p>
-                </div>
-              ))}
+              <p className="text-xl font-extrabold text-ink">Stalls you've ordered from</p>
+              {orderedStalls.length === 0 ? (
+                <p className="text-sm text-muted">None yet. Stalls you order from will show up here.</p>
+              ) : (
+                orderedStalls.map((stall) => (
+                  <div key={stall.stall_id} className="flex w-full items-start justify-between text-sm">
+                    <p className="text-muted">{stall.name}</p>
+                    <p className="font-bold text-ink">
+                      {stall.count} order{stall.count === 1 ? '' : 's'}
+                      <StallRating stallId={stall.stall_id} className="ml-2 font-semibold" />
+                    </p>
+                  </div>
+                ))
+              )}
             </Reveal>
           </div>
         </div>

@@ -10,8 +10,8 @@ export default function EditAccount() {
   const [firstName, setFirstName] = useState(user?.name?.split(' ')[0] ?? '')
   const [lastName, setLastName] = useState(user?.name?.split(' ').slice(1).join(' ') ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
-  const [phone, setPhone] = useState('+65 9123 4567')
-  const [address, setAddress] = useState('8 Tanjong Pagar Plaza, #12-04')
+  const [phone, setPhone] = useState(user?.phone ?? '')
+  const [address, setAddress] = useState(user?.address ?? '')
   const [notifyOffers, setNotifyOffers] = useState(true)
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function EditAccount() {
 
   const saveChanges = (event) => {
     event.preventDefault()
-    updateProfile({ name: `${firstName} ${lastName}`.trim(), email })
+    updateProfile({ name: `${firstName} ${lastName}`.trim(), email, phone: phone.trim(), address: address.trim() })
     navigate('/account')
   }
 
@@ -98,6 +98,7 @@ export default function EditAccount() {
             <span className="text-[11px] font-bold text-muted">PHONE</span>
             <input
               value={phone}
+              placeholder="Optional"
               onChange={(event) => setPhone(event.target.value)}
               className="w-full bg-transparent text-sm text-ink outline-none"
             />
@@ -106,6 +107,7 @@ export default function EditAccount() {
             <span className="text-[11px] font-bold text-muted">HOME ADDRESS</span>
             <input
               value={address}
+              placeholder="Optional"
               onChange={(event) => setAddress(event.target.value)}
               className="w-full bg-transparent text-sm text-ink outline-none"
             />
