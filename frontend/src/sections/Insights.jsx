@@ -1,48 +1,107 @@
+import { useState } from 'react'
 import Reveal from '../components/Reveal.jsx'
-import mapTexture from '../assets/insights-map-texture.png'
-import heatSpot1 from '../assets/heat-spot-1.svg'
-import heatSpot2 from '../assets/heat-spot-2.svg'
-import heatSpot3 from '../assets/heat-spot-3.svg'
-import heatSpot4 from '../assets/heat-spot-4.svg'
-import heatSpot5 from '../assets/heat-spot-5.svg'
-import indicatorDot from '../assets/indicator-dot.svg'
+import StallRating from '../components/StallRating.jsx'
+import { useMenu } from '../context/MenuContext.jsx'
+import { usePaymentAnalytics } from '../lib/analyticsApi.js'
+import { useSettlement } from '../lib/useSettlement.js'
 
-const metrics = [
-  { label: 'Total visits', value: '14.8k', change: '+12%' },
-  { label: 'Peak hour', value: '12:30 pm', change: 'Lunch' },
-  { label: 'Top location', value: 'Maxwell', change: '2.4k' },
-  { label: 'Trending dish', value: 'Laksa', change: '+28%' },
-]
+const money = (value) => `$${Number(value).toFixed(2)}`
+const percent = (part, whole) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
 
-const heatSpots = [
-  { src: heatSpot1, top: 225, left: 170, size: 90, delay: 0 },
-  { src: heatSpot2, top: 140, left: 360, size: 65, delay: 300 },
-  { src: heatSpot3, top: 255, left: 520, size: 54, delay: 600 },
-  { src: heatSpot4, top: 110, left: 640, size: 38, delay: 900 },
-  { src: heatSpot5, top: 330, left: 450, size: 32, delay: 1200 },
-]
+// local YYYY-MM-DD, so the day picker can show "today" instead of an empty dd/mm/yyyy
+function localToday() {
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
 
-const places = [
-  { rank: '01', name: 'Maxwell Food Centre', visits: '2.4k visits', share: '92%', barColor: 'bg-coral', width: '88%' },
-  { rank: '02', name: 'Old Airport Road', visits: '1.9k visits', share: '74%', barColor: 'bg-amber', width: '71%' },
-  { rank: '03', name: 'Lau Pa Sat', visits: '1.6k visits', share: '63%', barColor: 'bg-amber', width: '61%' },
-]
-
+// Everything here is computed from GET /settlement (paid sales per stall for one day,
+// MariaDB view v_daily_settlement). Nothing is invented: a quiet day shows zeros and an
+// empty state. Visits, wait time, trending dish and "busier now" have no data source, so
+// they are not shown.
 export default function Insights() {
+  const [date, setDate] = useState('') // '' = today (omit ?date= so the server uses CURDATE())
+  const today = localToday()
+  const { status, stalls, summary } = useSettlement(date)
+  const ready = status === 'ready'
+  const empty = ready && stalls.length === 0
+  const topStalls = stalls.slice(0, 5) // API already sorts by sales_total, highest first
+  const topSales = topStalls[0] ? Number(topStalls[0].sales_total) : 0
+
+  const metrics = [
+    { label: 'Sales', value: ready ? money(summary.sales) : '—', note: ready ? `${summary.orders} paid orders` : '' },
+    {
+      label: 'Average ticket',
+      value: ready ? money(summary.avgTicket) : '—',
+      note: ready ? `across ${summary.stallCount} stall${summary.stallCount === 1 ? '' : 's'}` : '',
+    },
+    {
+      label: 'Cashless share',
+      value: ready ? `${percent(summary.cashless, summary.sales)}%` : '—',
+      note: ready ? `${money(summary.cashless)} cashless · ${money(summary.cash)} cash` : '',
+    },
+    {
+      label: 'Top stall',
+      value: ready && topStalls[0] ? topStalls[0].stall_name : '—',
+      note: ready && topStalls[0] ? money(topStalls[0].sales_total) : '',
+    },
+  ]
+
+  // Payment mix + net by stall come from Mongo (Wileen's analytics routes), all days together.
+  // When Mongo is down they are blank, not estimated. The day-picker cards above stay on SQL.
+  const analytics = usePaymentAnalytics()
+  const analyticsReady = analytics.status === 'ready'
+  const { stalls: knownStalls } = useMenu()
+  const stallName = (stallId) => knownStalls.find((s) => String(s.stall_id) === String(stallId))?.name ?? `Stall #${stallId}`
+  const methodTotal = (method) => Number(analytics.byMethod.find((row) => row.method === method)?.total ?? 0)
+  const mixTotal = methodTotal('cash') + methodTotal('paynow') + methodTotal('card')
+  const mix = [
+    { label: 'Cash', amount: methodTotal('cash'), bar: 'bg-amber' },
+    { label: 'PayNow', amount: methodTotal('paynow'), bar: 'bg-coral' },
+    { label: 'Card', amount: methodTotal('card'), bar: 'bg-lime' },
+  ]
+  const mixText =
+    analytics.status === 'loading'
+      ? 'Loading…'
+      : 'Payment breakdown unavailable — the reviews/payments database (Mongo) is not reachable right now.'
+
+  const emptyText =
+    status === 'unavailable'
+      ? "Can't reach the API — make sure backend/app.py is running and sql/views/v_daily_settlement.sql is applied."
+      : status === 'loading'
+        ? 'Loading…'
+        : 'No paid orders on this day yet.'
+
   return (
     <section id="insights" className="flex w-full flex-col items-start bg-cream">
       <div className="flex w-full flex-col items-start gap-5 px-4 pb-9 pt-7 sm:px-8 lg:px-12">
         <Reveal className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col items-start gap-1">
-            <p className="text-xs font-bold text-coral">LIVE DINING PULSE</p>
-            <h2 className="text-[26px] font-extrabold text-ink sm:text-[34px]">Where Singapore is eating</h2>
+            <p className="text-xs font-bold text-coral">SALES INSIGHTS</p>
+            <h2 className="text-[26px] font-extrabold text-ink sm:text-[34px]">What's selling</h2>
           </div>
-          <button
-            type="button"
-            className="rounded-full bg-surface px-4 py-2.5 text-[13px] font-semibold text-ink transition-opacity duration-200 hover:opacity-60"
-          >
-            This week ⌄
-          </button>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-[13px] font-semibold text-ink">
+              <span className="text-muted">Day</span>
+              <input
+                type="date"
+                value={date || today}
+                max={today}
+                onChange={(event) => setDate(event.target.value === today ? '' : event.target.value)}
+                className="bg-transparent text-[13px] font-semibold text-ink outline-none"
+                aria-label="Choose a day"
+              />
+            </label>
+            {date && (
+              <button
+                type="button"
+                onClick={() => setDate('')}
+                className="rounded-full bg-ink px-4 py-2.5 text-[13px] font-semibold text-white transition-opacity duration-200 hover:opacity-60"
+              >
+                Today
+              </button>
+            )}
+          </div>
         </Reveal>
 
         <div className="grid w-full grid-cols-2 gap-3.5 lg:grid-cols-4">
@@ -54,68 +113,117 @@ export default function Insights() {
             >
               <p className="text-[11px] font-bold text-muted">{metric.label}</p>
               <p className="text-[22px] font-extrabold text-ink">{metric.value}</p>
-              <p className="text-[11px] font-semibold text-success">{metric.change}</p>
+              <p className="text-[11px] font-semibold text-success">{metric.note}</p>
             </Reveal>
           ))}
         </div>
 
-        <div className="flex w-full flex-col items-start gap-[18px] lg:h-[439px] lg:flex-row">
+        <div className="flex w-full flex-col items-start gap-[18px] lg:flex-row">
           <Reveal
             delay={150}
-            className="relative h-[300px] w-full overflow-hidden rounded-3xl bg-forest-dark sm:h-[380px] lg:h-full lg:flex-1"
+            className="flex w-full flex-col items-start gap-4 rounded-3xl bg-forest-dark p-[22px] lg:flex-1"
           >
-            <img src={mapTexture} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" />
-            {heatSpots.map((spot, index) => (
-              <img
-                key={index}
-                src={spot.src}
-                alt=""
-                className="absolute animate-pulse-glow"
-                style={{ top: spot.top, left: spot.left, width: spot.size, height: spot.size, animationDelay: `${spot.delay}ms` }}
-              />
-            ))}
-            <div className="absolute left-5 top-5 flex items-center gap-2 rounded-full bg-surface px-[13px] py-[9px]">
-              <img src={indicatorDot} alt="" className="size-[9px] animate-pulse" />
-              <p className="text-[11px] font-bold text-ink">BUSIER NOW</p>
-            </div>
-            <div className="absolute left-[145px] top-[310px] flex flex-col items-start gap-0.5 rounded-lg bg-surface p-3">
-              <p className="text-[13px] font-extrabold text-ink">Maxwell Food Centre</p>
-              <p className="text-[11px] text-coral">Very popular · 92%</p>
-            </div>
+            <p className="text-xl font-extrabold text-white">Payment mix</p>
+            {!analyticsReady ? (
+              <p className="text-sm text-white/70">{mixText}</p>
+            ) : mixTotal === 0 ? (
+              <p className="text-sm text-white/70">No payments recorded yet.</p>
+            ) : (
+              <>
+                {mix.map((row) => (
+                  <div key={row.label} className="flex w-full flex-col items-start gap-2">
+                    <div className="flex w-full items-start justify-between text-sm text-white">
+                      <p className="font-bold">{row.label}</p>
+                      <p>
+                        {money(row.amount)} · {percent(row.amount, mixTotal)}%
+                      </p>
+                    </div>
+                    <div className="h-[8px] w-full overflow-hidden rounded-full bg-white/15">
+                      <div
+                        className={`h-[8px] rounded-full transition-all duration-1000 ease-out ${row.bar}`}
+                        style={{ width: `${percent(row.amount, mixTotal)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <p className="text-[11px] text-white/60">All days, before refunds.</p>
+              </>
+            )}
           </Reveal>
 
           <Reveal
             delay={250}
-            className="flex w-full flex-col items-start gap-[18px] rounded-3xl bg-surface p-[22px] lg:h-full lg:w-[330px] lg:shrink-0"
+            className="flex w-full flex-col items-start gap-[18px] rounded-3xl bg-surface p-[22px] lg:w-[360px] lg:shrink-0"
           >
-            <p className="text-xl font-extrabold text-ink">Popular places</p>
-            {places.map((place) => (
-              <div key={place.rank} className="flex w-full flex-col items-start gap-2">
-                <div className="flex w-full items-start gap-2.5">
-                  <p className="w-5 text-[13px] font-extrabold text-coral">{place.rank}</p>
-                  <div className="flex flex-1 flex-col items-start gap-0.5">
-                    <p className="text-sm font-bold text-ink">{place.name}</p>
-                    <p className="text-[11px] text-muted">{place.visits}</p>
+            <p className="text-xl font-extrabold text-ink">Top stalls</p>
+            {!ready || empty ? (
+              <p className="text-sm text-muted">{emptyText}</p>
+            ) : (
+              topStalls.map((stall, index) => (
+                <div key={stall.stall_id} className="flex w-full flex-col items-start gap-2">
+                  <div className="flex w-full items-start gap-2.5">
+                    <p className="w-5 text-[13px] font-extrabold text-coral">{String(index + 1).padStart(2, '0')}</p>
+                    <div className="flex flex-1 flex-col items-start gap-0.5">
+                      <p className="text-sm font-bold text-ink">
+                        {stall.stall_name}
+                        <StallRating stallId={stall.stall_id} className="ml-2 text-[11px] font-semibold text-muted" />
+                      </p>
+                      <p className="text-[11px] text-muted">
+                        {stall.order_count} order{Number(stall.order_count) === 1 ? '' : 's'}
+                        {stall.cuisine_type ? ` · ${stall.cuisine_type}` : ''}
+                      </p>
+                    </div>
+                    <p className="text-xs font-bold text-success">{money(stall.sales_total)}</p>
                   </div>
-                  <p className="text-xs font-bold text-success">{place.share}</p>
+                  <div className="h-[5px] w-full overflow-hidden rounded-full bg-border">
+                    <div
+                      className="h-[5px] rounded-full bg-coral transition-all duration-1000 ease-out"
+                      style={{ width: `${percent(Number(stall.sales_total), topSales)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-[5px] w-full overflow-hidden rounded-full bg-border">
-                  <div
-                    className={`h-[5px] rounded-full transition-all duration-1000 ease-out ${place.barColor}`}
-                    style={{ width: place.width }}
-                  />
-                </div>
-              </div>
-            ))}
-
-            <div className="flex w-full flex-col items-start gap-1 rounded-lg bg-cream p-3.5">
-              <p className="text-[10px] font-bold text-coral">BEST TIME TO VISIT</p>
-              <p className="text-[13px] leading-[1.4] text-ink">
-                Try Maxwell before 11:45 am for shorter queues.
-              </p>
-            </div>
+              ))
+            )}
           </Reveal>
         </div>
+
+        <Reveal delay={300} className="flex w-full flex-col items-start gap-3 rounded-3xl bg-surface p-[22px]">
+          <div className="flex flex-col items-start gap-1">
+            <p className="text-xl font-extrabold text-ink">Gross, refunds and net by stall</p>
+            <p className="text-[11px] text-muted">All days, from the payments log. Blank if that log is unreachable.</p>
+          </div>
+          {!analyticsReady ? (
+            <p className="text-sm text-muted">{mixText}</p>
+          ) : analytics.netByStall.length === 0 ? (
+            <p className="text-sm text-muted">No payments recorded yet.</p>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <table className="w-full min-w-[480px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-[11px] font-bold uppercase text-muted">
+                    <th className="py-2 pr-3">Stall</th>
+                    <th className="px-3 py-2 text-right">Gross</th>
+                    <th className="px-3 py-2 text-right">Refunded</th>
+                    <th className="py-2 pl-3 text-right">Net</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.netByStall.map((row) => (
+                    <tr key={row.stall_id} className="border-b border-border/60 last:border-0">
+                      <td className="py-2.5 pr-3 font-bold text-ink">{stallName(row.stall_id)}</td>
+                      <td className="px-3 py-2.5 text-right text-ink">{money(row.gross)}</td>
+                      <td className="px-3 py-2.5 text-right text-ink">
+                        {money(row.refunded)}
+                        <span className="ml-1 text-[11px] text-muted">({row.refund_count})</span>
+                      </td>
+                      <td className="py-2.5 pl-3 text-right font-bold text-ink">{money(row.net)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Reveal>
       </div>
     </section>
   )
