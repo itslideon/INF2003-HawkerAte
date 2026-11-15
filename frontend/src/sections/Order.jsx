@@ -103,7 +103,7 @@ function StatusMessage({ title, body }) {
 }
 
 export default function Order() {
-  const { status, stall, dishes } = useMenu()
+  const { status, stall, stalls, dishes, selectStall, switching, switchError } = useMenu()
   const [activeFilter, setActiveFilter] = useState(FILTERS[0])
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState('grid')
@@ -131,8 +131,14 @@ export default function Order() {
     )
   }
 
-  if (status === 'empty' || !stall) {
+  // No stall at all. (A stall whose menu is empty still renders below, so the diner can pick another.)
+  if (!stall) {
     return <StatusMessage title="No stalls or dishes yet" body="Check back once the centres/stalls are seeded." />
+  }
+
+  const pickStall = (stallId) => {
+    if (itemCount > 0 && !window.confirm('Switching stall will empty your basket. Continue?')) return
+    selectStall(stallId)
   }
 
   return (
@@ -158,6 +164,38 @@ export default function Order() {
               />
             </div>
           </Reveal>
+
+          {stalls.length > 1 && (
+            <Reveal delay={50} className="flex w-full flex-col items-start gap-2">
+              <p className="text-[11px] font-bold uppercase text-muted">Choose a stall</p>
+              <div className="flex flex-wrap items-start gap-2.5">
+                {stalls.map((option) => {
+                  const active = option.stall_id === stall.stall_id
+                  return (
+                    <button
+                      key={option.stall_id}
+                      type="button"
+                      onClick={() => pickStall(option.stall_id)}
+                      disabled={switching}
+                      aria-pressed={active}
+                      className={`rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-200 hover:opacity-60 disabled:cursor-wait disabled:opacity-50 ${
+                        active ? 'bg-forest text-white' : 'bg-surface text-ink'
+                      }`}
+                    >
+                      {option.name}
+                      {option.cuisine_type ? <span className="font-normal opacity-70"> · {option.cuisine_type}</span> : null}
+                    </button>
+                  )
+                })}
+              </div>
+              {switching && <p className="text-xs text-muted">Loading the menu…</p>}
+              {switchError && (
+                <p role="alert" className="text-xs font-semibold text-coral">
+                  Couldn't load that stall's menu — still showing {stall.name}. Try again.
+                </p>
+              )}
+            </Reveal>
+          )}
 
           <Reveal delay={100} className="flex w-full flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-start gap-2.5">
@@ -203,8 +241,10 @@ export default function Order() {
 
           {visibleDishes.length === 0 ? (
             <Reveal className="flex w-full flex-col items-start gap-1 rounded-2xl bg-surface p-6">
-              <p className="text-sm font-bold text-ink">No dishes match</p>
-              <p className="text-xs text-muted">Try a different search or filter.</p>
+              <p className="text-sm font-bold text-ink">{dishes.length === 0 ? 'No dishes at this stall yet' : 'No dishes match'}</p>
+              <p className="text-xs text-muted">
+                {dishes.length === 0 ? 'Try another stall.' : 'Try a different search or filter.'}
+              </p>
             </Reveal>
           ) : viewMode === 'grid' ? (
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

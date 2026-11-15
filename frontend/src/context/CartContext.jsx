@@ -1,12 +1,19 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { useMenu } from './MenuContext.jsx'
 
 const CartContext = createContext(null)
 const MAX_QUANTITY_PER_DISH = 20
 
 export function CartProvider({ children }) {
-  const { dishes } = useMenu()
+  const { dishes, stall } = useMenu()
   const [basket, setBasket] = useState({})
+
+  // One order = one stall (POST /orders/pay takes a single stall_id), so a basket never carries
+  // over when the diner switches stall.
+  const stallId = stall?.stall_id
+  useEffect(() => {
+    setBasket({})
+  }, [stallId])
 
   const addToBasket = (menuItemId) => {
     setBasket((prev) => ({
