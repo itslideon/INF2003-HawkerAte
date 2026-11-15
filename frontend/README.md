@@ -9,7 +9,7 @@ npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-Open http://localhost:5173. Leave the terminal running; Ctrl+C to stop. If 5173 is taken, Vite prints another port — use that.
+Open http://localhost:5173. Leave the terminal running; Ctrl+C to stop. If 5173 is taken, Vite prints another port, so use that.
 
 You can also `cd frontend` and run `npm install` / `npm run dev` as usual.
 

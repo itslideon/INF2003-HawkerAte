@@ -18,7 +18,8 @@ export default function StallRating({ stallId, className = '' }) {
     }
   }, [stallId])
 
-  if (!rating) return null // loading or no backend yet — say nothing rather than guess
+  if (!rating) return null // loading or no backend yet, say nothing rather than guess
+  if (rating.count === 0) return null // no reviews yet: the API sends average 0, which is not a real 0.0 rating
 
   return (
     <span className={className}>

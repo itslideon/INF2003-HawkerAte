@@ -75,7 +75,7 @@ export default function MakanSplitPage() {
             Makan split
           </h1>
           <p className="max-w-[620px] text-base leading-[1.5] text-muted">
-            One bill to the stall, settle among friends. The stall is already paid — friends repay the organizer, not the
+            One bill to the stall, settle among friends. The stall is already paid. Friends repay the organizer, not the
             stall.
           </p>
         </Reveal>
@@ -252,20 +252,20 @@ function CreateForm({ order, onCreated }) {
           </button>
         )}
         <p className="text-xs text-muted">
-          Friends need an existing customer ID with a wallet — there's no friend search yet.
+          Friends need an existing customer ID with a wallet. There's no friend search yet.
         </p>
       </div>
 
       {mode === 'equal' && filled.length >= 1 && idsValid && idsUnique && (
         <p className="text-sm text-ink">
-          About <span className="font-extrabold">{money(total / peopleCount)}</span> each across {peopleCount} people —
-          exact cents are worked out by the server.
+          About <span className="font-extrabold">{money(total / peopleCount)}</span> each across {peopleCount} people.
+          Exact cents are worked out by the server.
         </p>
       )}
       {mode === 'custom' && (
         <p className={`text-sm font-semibold ${customOk ? 'text-success' : 'text-ink'}`}>
           Allocated {money(allocated)} of {money(total)}
-          {customOk ? ' ✓' : ` — ${money(Math.abs(total - allocated))} ${allocated < total ? 'left to assign' : 'over'}`}
+          {customOk ? ' ✓' : `, ${money(Math.abs(total - allocated))} ${allocated < total ? 'left to assign' : 'over'}`}
         </p>
       )}
       {filled.length >= 1 && !idsValid && (
@@ -332,7 +332,7 @@ function SessionView({ session, order, onChange }) {
                 {member.is_organizer
                   ? 'Paid the stall'
                   : member.is_settled
-                    ? 'Settled — paid the organizer'
+                    ? 'Settled, paid the organizer'
                     : 'Owes the organizer'}
               </p>
             </div>

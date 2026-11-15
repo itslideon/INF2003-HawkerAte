@@ -1,14 +1,14 @@
-// local order history (localStorage) — POST /orders/pay is the source of truth for the
+// local order history (localStorage), POST /orders/pay is the source of truth for the
 // order itself, this just remembers it per signed-in user so the Account page can list it.
 
 const ORDERS_KEY_PREFIX = 'hawkerate.orders.'
 
-// `value` matches payment.method in Lideon's schema (ENUM paynow/card/cash) — that's what
+// `value` matches payment.method in Lideon's schema (ENUM paynow/card/cash), that's what
 // POST /orders/pay will expect. Payments are simulated, so no card/bank details are collected.
 export const PAYMENT_METHODS = [
   { value: 'paynow', label: 'PayNow', hint: 'Scan the QR with your banking app (simulated)' },
   { value: 'card', label: 'Card', hint: 'Debit or credit card (simulated, no card details needed)' },
-  { value: 'cash', label: 'Cash', hint: 'Pay at the stall counter when you collect' },
+  { value: 'cash', label: 'Cash', hint: 'Simulated cash, taken from the demo wallet like the other methods' },
 ]
 
 export function paymentMethodLabel(value) {
@@ -31,7 +31,7 @@ export function saveOrderForUser(customerId, order) {
     const existing = JSON.parse(localStorage.getItem(key) ?? '[]')
     localStorage.setItem(key, JSON.stringify([order, ...existing]))
   } catch {
-    // e.g. private browsing — order still goes through, just doesn't stick around
+    // e.g. private browsing, order still goes through, just doesn't stick around
   }
 }
 
@@ -52,6 +52,6 @@ export function updateOrderStatus(customerId, orderId, status) {
       JSON.stringify(existing.map((order) => (order.order_id === orderId ? { ...order, status } : order))),
     )
   } catch {
-    // storage unavailable — the in-memory status still updates
+    // storage unavailable, the in-memory status still updates
   }
 }

@@ -43,7 +43,7 @@ export default function CentreAdminPage() {
     body = (
       <StatusNotice
         title="No centre to show"
-        text="Can't load a centre — make sure backend/app.py is running and the centre data is loaded."
+        text="Can't load a centre. Make sure backend/app.py is running and the centre data is loaded."
       />
     )
   } else if (state.status === 'error') {

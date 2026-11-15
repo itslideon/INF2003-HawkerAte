@@ -38,7 +38,7 @@ export default function Signup() {
           <div className="flex w-full max-w-[430px] flex-col items-start gap-2 rounded-2xl bg-forest p-5">
             <p className="text-[17px] font-bold text-white">Free, always</p>
             <p className="text-sm leading-[1.5] text-white/73">
-              No subscriptions — just a faster way to order from your favourite hawker stalls.
+              No subscriptions, just a faster way to order from your favourite hawker stalls.
             </p>
           </div>
         </Reveal>

@@ -93,7 +93,7 @@ export default function OwnerPage() {
                 <p className="text-xl font-extrabold text-ink">No paid orders today</p>
                 <p className="mt-2 text-sm text-muted">
                   Sales are $0.00 until someone pays this stall. That empty state is
-                  real — this page will not invent a total.
+                  real, and this page will not invent a total.
                 </p>
               </Reveal>
             ) : null}

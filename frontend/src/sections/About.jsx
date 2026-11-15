@@ -1,16 +1,34 @@
+import { useEffect, useState } from 'react'
 import Reveal from '../components/Reveal.jsx'
 import hawkerCentre from '../assets/about-hawker-centre.png'
+import { useMenu } from '../context/MenuContext.jsx'
+import { getCentres } from '../lib/browseApi.js'
 
-const impact = [
-  { value: '32', label: 'hawker centres' },
-  { value: '68%', label: 'family-run stalls' },
-  { value: '11k', label: 'meals discovered' },
-]
-
+// Real counts only (GET /centres and the stalls MenuContext already loaded). The old copy had
+// invented "68% family-run" and "11k meals" figures with no data behind them. "—" while loading
+// or when the API is unreachable, never a made-up number.
 export default function About() {
+  const { centre, stalls } = useMenu()
+  const [centreCount, setCentreCount] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getCentres().then((list) => {
+      if (!cancelled && Array.isArray(list)) setCentreCount(list.length)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const impact = [
+    { value: centreCount ?? '—', label: 'hawker centres' },
+    { value: centre ? stalls.length : '—', label: centre ? `stalls at ${centre.name}` : 'stalls' },
+  ]
+
   return (
     <section id="about" className="flex w-full flex-col items-start bg-surface">
-      <div className="flex w-full flex-1 flex-col items-start gap-10 px-4 py-10 sm:px-8 lg:flex-row lg:gap-[58px] lg:px-16 lg:py-[52px]">
+      <div className="flex w-full flex-1 flex-col items-start gap-10 px-4 py-10 sm:px-8 lg:flex-row lg:items-stretch lg:gap-[58px] lg:px-16 lg:py-[52px]">
         <Reveal className="flex w-full flex-col items-start gap-[30px] lg:w-[500px] lg:shrink-0">
           <div className="flex w-full flex-col items-start gap-3">
             <p className="text-xs font-bold uppercase text-coral">Our story</p>
@@ -40,8 +58,8 @@ export default function About() {
           </div>
         </Reveal>
 
-        <Reveal delay={150} className="relative h-[300px] w-full overflow-hidden rounded-3xl sm:h-[400px] lg:h-full lg:flex-1">
-          <img src={hawkerCentre} alt="Hawker centre" className="h-full w-full object-cover" />
+        <Reveal delay={150} className="relative h-[300px] w-full overflow-hidden rounded-3xl sm:h-[400px] lg:h-auto lg:min-h-[420px] lg:flex-1">
+          <img src={hawkerCentre} alt="Hawker centre" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute bottom-[22px] left-[22px] rounded-2xl bg-surface p-3.5">
             <p className="text-[13px] font-semibold text-ink">
               Stories served one plate at a time.

@@ -4,7 +4,7 @@ import { apiGet } from './api.js'
 const POLL_MS = 30000
 
 // Mongo payment_events analytics (Wileen's routes in docs/api-contract.md). Both answer 503 when
-// Mongo is down, which apiGet() turns into null — callers show a blank, never a made-up number.
+// Mongo is down, which apiGet() turns into null, callers show a blank, never a made-up number.
 //   GET /analytics/payments/by-method[?stall_id=]  -> [{ method, total, count }]
 //   GET /analytics/payments/net-by-stall           -> [{ stall_id, gross, refunded, net, payment_count, refund_count }]
 // net-by-stall only has stall IDs (as strings); names come from the stall routes (MenuContext).

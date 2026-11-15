@@ -105,18 +105,17 @@ export default function CheckoutPage() {
             <p className="text-xs font-bold uppercase text-coral">Order summary</p>
             <h1 className="text-[32px] font-extrabold leading-[1.1] text-ink sm:text-[46px] sm:leading-[1.05]">Dine-in at {stall.name}</h1>
             <p className="text-base leading-[1.5] text-muted">
-              Enjoy your meal at the hawker centre — no delivery needed. Show your order ID at the counter
+              Enjoy your meal at the hawker centre, no delivery needed. Show your order ID at the counter
               when it's ready.
             </p>
           </div>
           <div className="flex w-full flex-col items-start gap-2 rounded-2xl bg-forest p-5">
             <p className="text-base font-bold text-white">
-              {user ? `Ordering as ${user.name}` : 'Ordering as a guest'}
+              {user ? `Signed in as ${user.name}` : 'Demo checkout'}
             </p>
             <p className="text-[13px] leading-[1.5] text-white/73">
-              {user
-                ? "We'll save this order to your account so you can find it again."
-                : 'Sign in to save this order to your account.'}
+              Sign-in isn't connected to payments yet, so every order is paid from the demo wallet (customer{' '}
+              {DEMO_CUSTOMER_ID}) whoever is signed in.
             </p>
           </div>
         </Reveal>

@@ -1,7 +1,7 @@
 import Reveal from '../components/Reveal.jsx'
 import { useSettlement } from '../lib/useSettlement.js'
 
-// Real numbers from GET /settlement (today). "—" while loading or if the API is down —
+// Real numbers from GET /settlement (today). "—" while loading or if the API is down,
 // never a made-up figure. Wait time isn't tracked anywhere, so it's not shown.
 export default function LiveStats() {
   const { status, summary } = useSettlement()

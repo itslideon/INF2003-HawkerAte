@@ -5,19 +5,23 @@ import Reveal from '../components/Reveal.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import StallRating from '../components/StallRating.jsx'
+import { dishEmoji } from '../lib/dishEmoji.js'
 
 // Real menu_item rows have no photo (GET /stalls/:id/menu only sends menu_item_id,
-// name, price, is_available — see docs/api-contract.md), so dishes get a plain
-// placeholder instead of a stock photo that would misrepresent a real dish.
-function DishThumb({ className = '' }) {
+// name, price, is_available, see docs/api-contract.md), so each dish shows a food emoji picked
+// from its name (see lib/dishEmoji.js) instead of a stock photo that could misrepresent it.
+function DishThumb({ name, className = '' }) {
   return (
-    <div className={`flex shrink-0 items-center justify-center rounded-lg bg-cream text-3xl ${className}`}>
-      🍽️
+    <div
+      aria-hidden="true"
+      className={`flex shrink-0 items-center justify-center rounded-lg bg-cream ${className}`}
+    >
+      <span className={className.includes('w-full') ? 'text-6xl' : 'text-4xl'}>{dishEmoji(name)}</span>
     </div>
   )
 }
 
-// Derived from real fields only (price, is_available) — the mock's
+// Derived from real fields only (price, is_available), the mock's
 // Popular/Chicken rice/Halal tags had no equivalent in the real menu_item row.
 const FILTERS = ['All', 'Under $10']
 
@@ -126,7 +130,7 @@ export default function Order() {
     return (
       <StatusMessage
         title="Menu unavailable right now"
-        body="Can't reach the API — make sure backend/app.py is running and VITE_API_BASE_URL is set."
+        body="Can't reach the API. Make sure backend/app.py is running and VITE_API_BASE_URL is set."
       />
     )
   }
@@ -191,7 +195,7 @@ export default function Order() {
               {switching && <p className="text-xs text-muted">Loading the menu…</p>}
               {switchError && (
                 <p role="alert" className="text-xs font-semibold text-coral">
-                  Couldn't load that stall's menu — still showing {stall.name}. Try again.
+                  Couldn't load that stall's menu. Still showing {stall.name}. Try again.
                 </p>
               )}
             </Reveal>
@@ -254,7 +258,7 @@ export default function Order() {
                   delay={index * 100}
                   className="flex flex-col items-start gap-2.5 rounded-2xl bg-surface p-2.5 transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <DishThumb className="h-[178px] w-full" />
+                  <DishThumb name={dish.name} className="h-[178px] w-full" />
                   <p className="text-[15px] font-bold text-ink">{dish.name}</p>
                   <div className="flex w-full items-center justify-between">
                     <p className="text-base font-extrabold text-ink">${dish.price.toFixed(2)}</p>
@@ -278,7 +282,7 @@ export default function Order() {
                   delay={index * 80}
                   className="flex w-full items-center gap-4 rounded-2xl bg-surface p-3 transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                 >
-                  <DishThumb className="size-[72px]" />
+                  <DishThumb name={dish.name} className="size-[72px]" />
                   <div className="flex flex-1 flex-col items-start gap-0.5">
                     <p className="text-[15px] font-bold text-ink">{dish.name}</p>
                   </div>

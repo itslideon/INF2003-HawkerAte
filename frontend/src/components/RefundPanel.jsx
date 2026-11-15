@@ -97,7 +97,7 @@ export default function RefundPanel({ stallId, onRefunded }) {
 
       {done && (
         <div role="status" className="w-full rounded-xl bg-lime/50 p-3 text-sm font-semibold text-ink">
-          Order {done.order_id} refunded — ${Number(done.refund_amount).toFixed(2)} returned to the customer's wallet.
+          Order {done.order_id} refunded. ${Number(done.refund_amount).toFixed(2)} returned to the customer's wallet.
           {done.mongo_written === false && (
             <span className="mt-1 block text-xs font-normal text-muted">
               Saved in MariaDB; the Mongo audit event could not be written.
@@ -117,7 +117,7 @@ export default function RefundPanel({ stallId, onRefunded }) {
         {queue === undefined ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : queue === null ? (
-          <p className="text-sm text-muted">Can't reach the queue — is backend/app.py running?</p>
+          <p className="text-sm text-muted">Can't reach the queue. Is backend/app.py running?</p>
         ) : line.length === 0 ? (
           <p className="text-sm text-muted">No orders waiting right now.</p>
         ) : (

@@ -15,7 +15,7 @@ export function requestNotificationPermission() {
   try {
     Notification.requestPermission()
   } catch {
-    // older browsers use a callback form — not worth supporting
+    // older browsers use a callback form, not worth supporting
   }
 }
 
@@ -52,7 +52,7 @@ export function OrderTrackerProvider({ children }) {
       ...prev,
       { id, orderId: id, stallName: order.stall_name },
     ])
-    showBrowserNotification('Your food is ready!', `Order ${id} — collect it at ${order.stall_name}.`)
+    showBrowserNotification('Your food is ready!', `Order ${id}: collect it at ${order.stall_name}.`)
   }, [])
 
   const applyQueue = useCallback(

@@ -5,7 +5,7 @@ const MenuContext = createContext(null)
 
 // Shows the first centre. Chains GET /centres -> GET /centres/:id/stalls -> GET /stalls/:id/menu
 // once on load (first stall opens by default); selectStall() then loads any other stall in the
-// centre. `status` drives what the UI shows — never fall back to fake dishes, per the "no
+// centre. `status` drives what the UI shows, never fall back to fake dishes, per the "no
 // hardcoded fake stalls" rule. `switching` is true while a newly picked stall's menu loads, and
 // `switchError` is set if that menu could not be loaded (the previous stall stays on screen).
 const INITIAL_STATE = {

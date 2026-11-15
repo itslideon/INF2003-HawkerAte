@@ -8,13 +8,13 @@ export default function OrderConfirmation({ order, queue, isReady, collected, on
   const ahead = queue?.ahead
   const nowServing = queue?.now_serving_ticket
 
-  let waitLine = "Keep this page open — we'll alert you when you're next."
+  let waitLine = "Keep this page open and we'll alert you when you're next."
   if (typeof ahead === 'number' && ahead > 0) {
     waitLine = `${ahead} ahead of you. Now serving ticket ${nowServing ?? '—'}.`
   } else if (isReady && !collected) {
     waitLine = `Collect it at the ${order.stall_name} counter.`
   } else if (collected) {
-    waitLine = 'Thanks — you’re off the stall line.'
+    waitLine = 'Thanks, you’re off the stall line.'
   }
 
   return (
@@ -43,7 +43,7 @@ export default function OrderConfirmation({ order, queue, isReady, collected, on
           />
           <div className="flex flex-col gap-0.5">
             <p className="text-base font-extrabold">
-              {collected ? 'Collected' : isReady ? "You're next — collect now" : 'In the stall line…'}
+              {collected ? 'Collected' : isReady ? "You're next, collect now" : 'In the stall line…'}
             </p>
             <p className={`text-[13px] ${isReady ? 'text-ink/73' : 'text-white/73'}`}>{waitLine}</p>
           </div>
@@ -73,12 +73,12 @@ export default function OrderConfirmation({ order, queue, isReady, collected, on
         </div>
         <p className="text-sm text-ink">
           {order.method === 'cash'
-            ? `Pay $${order.total_amount.toFixed(2)} in cash at the counter.`
+            ? `Paid $${order.total_amount.toFixed(2)} as cash (simulated), taken from the demo wallet.`
             : `Paid with ${paymentMethodLabel(order.method)} (simulated).`}
         </p>
         <p className="text-xs text-muted">
           {order.customer_id
-            ? 'Saved to your orders — find it any time under your account.'
+            ? 'Saved to your orders. Find it any time under your account.'
             : 'This order was not saved. Sign in next time to keep your order history.'}
         </p>
         <button
@@ -86,7 +86,7 @@ export default function OrderConfirmation({ order, queue, isReady, collected, on
           onClick={() => navigate(`/orders/${order.order_id}/split`)}
           className="w-full rounded-full bg-lime px-5 py-3 text-sm font-bold text-ink transition-opacity duration-200 hover:opacity-60"
         >
-          Makan split — share the bill with friends
+          Makan split: share the bill with friends
         </button>
         <button
           type="button"

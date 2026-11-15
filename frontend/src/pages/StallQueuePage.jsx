@@ -58,14 +58,14 @@ export default function StallQueuePage() {
     body = (
       <Message
         title="No stall to show"
-        text="Can't load a stall — make sure backend/app.py is running and the stall data is loaded."
+        text="Can't load a stall. Make sure backend/app.py is running and the stall data is loaded."
       />
     )
   } else if (queue === null) {
     body = (
       <Message
         title="Queue unavailable right now"
-        text="Can't reach the queue API — is backend/app.py running and 04_queue.sql applied?"
+        text="Can't reach the queue API. Is backend/app.py running and 04_queue.sql applied?"
       />
     )
   } else if (line.length === 0) {
@@ -114,7 +114,7 @@ export default function StallQueuePage() {
         <Reveal className="flex w-full flex-col items-start gap-2">
           <p className="text-xs font-bold uppercase text-coral">Stall view</p>
           <h1 className="text-[32px] font-extrabold leading-[1.1] text-ink sm:text-[46px] sm:leading-[1.05]">
-            {stall ? `${stall.name} — queue` : 'Stall queue'}
+            {stall ? `${stall.name} queue` : 'Stall queue'}
           </h1>
           <p className="text-base leading-[1.5] text-muted">
             Press Ready / collected when an order is handed over. It leaves the line and the next ticket moves up on the

@@ -63,11 +63,11 @@ export default function Insights() {
   const mixText =
     analytics.status === 'loading'
       ? 'Loading…'
-      : 'Payment breakdown unavailable — the reviews/payments database (Mongo) is not reachable right now.'
+      : 'Payment breakdown unavailable. The reviews/payments database (Mongo) is not reachable right now.'
 
   const emptyText =
     status === 'unavailable'
-      ? "Can't reach the API — make sure backend/app.py is running and sql/views/v_daily_settlement.sql is applied."
+      ? "Can't reach the API. Make sure backend/app.py is running and sql/views/v_daily_settlement.sql is applied."
       : status === 'loading'
         ? 'Loading…'
         : 'No paid orders on this day yet.'

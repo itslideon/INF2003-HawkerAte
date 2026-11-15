@@ -1,5 +1,5 @@
 // Owner totals from Lancea's MariaDB views (docs/api-contract.md).
-// Callers must show zeros / empty copy — never invent a sales number.
+// Callers must show zeros / empty copy, never invent a sales number.
 
 import { apiGet } from './api.js'
 

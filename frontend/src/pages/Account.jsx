@@ -112,7 +112,7 @@ export default function Account() {
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-muted">No orders yet — your next order will show up here.</p>
+                <p className="text-sm text-muted">No orders yet. Your next order will show up here.</p>
               )}
             </Reveal>
 

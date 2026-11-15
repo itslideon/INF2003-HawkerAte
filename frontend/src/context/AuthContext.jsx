@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
       if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
       else localStorage.removeItem(STORAGE_KEY)
     } catch {
-      // private browsing etc — just keep it in memory then
+      // private browsing etc, just keep it in memory then
     }
   }, [user])
 

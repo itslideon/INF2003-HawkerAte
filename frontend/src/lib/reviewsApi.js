@@ -1,4 +1,4 @@
-// GET /stalls/:id/reviews — average rating and count from Mongo.
+// GET /stalls/:id/reviews, average rating and count from Mongo.
 
 import { apiGet } from './api.js'
 

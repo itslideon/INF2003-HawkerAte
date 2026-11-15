@@ -5,7 +5,7 @@ const POLL_MS = 30000
 
 // GET /settlement (docs/api-contract.md): paid sales per stall for one day, read from
 // the v_daily_settlement view. No date = today. Empty `stalls` means no paid orders
-// that day — show zeros / an empty state, never a placeholder number.
+// that day, show zeros / an empty state, never a placeholder number.
 export function getSettlement(date) {
   return apiGet(date ? `/settlement?date=${encodeURIComponent(date)}` : '/settlement')
 }

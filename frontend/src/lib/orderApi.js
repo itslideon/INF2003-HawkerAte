@@ -1,5 +1,5 @@
 // POST /orders/pay (see docs/api-contract.md). The server computes total_amount
-// from MariaDB menu prices — never compute it client-side for the order record.
+// from MariaDB menu prices, never compute it client-side for the order record.
 
 import { apiPost } from './api.js'
 

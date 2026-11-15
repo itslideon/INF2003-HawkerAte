@@ -44,7 +44,7 @@ export function CartProvider({ children }) {
           quantity,
         }))
         // menu_item_id is a real int from the API now, but object keys are always
-        // strings — String() on both sides keeps the lookup working regardless.
+        // strings, String() on both sides keeps the lookup working regardless.
         // Drops stale entries if the menu ever changes under an open basket.
         .filter((entry) => entry.dish),
     [basket, dishes],

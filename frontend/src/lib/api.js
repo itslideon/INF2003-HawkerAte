@@ -1,19 +1,19 @@
 // Thin fetch wrapper for calling Lideon's API (see ../../../docs/api-contract.md).
 // Every endpoint that isn't live yet, or that the API isn't reachable for, should
-// resolve to `null` here rather than throw — callers show a waiting/empty state
+// resolve to `null` here rather than throw, callers show a waiting/empty state
 // instead of a fake number, per the frontend README rule.
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export async function apiGet(path) {
-  if (!BASE_URL) return null // no backend configured yet — caller shows a waiting state
+  if (!BASE_URL) return null // no backend configured yet, caller shows a waiting state
 
   try {
     const res = await fetch(`${BASE_URL}${path}`)
     if (!res.ok) return null
     return await res.json()
   } catch {
-    // backend not running / unreachable — same as "not available yet" for the UI
+    // backend not running / unreachable, same as "not available yet" for the UI
     return null
   }
 }
@@ -33,7 +33,7 @@ export async function apiPost(path, body) {
     if (!res.ok) return { ok: false, error: data?.error ?? `Request failed (${res.status})` }
     return { ok: true, data }
   } catch {
-    return { ok: false, error: "Can't reach the API — is backend/app.py running?" }
+    return { ok: false, error: "Can't reach the API. Is backend/app.py running?" }
   }
 }
 
@@ -52,6 +52,6 @@ export async function apiRequest(path, { method = 'GET', body } = {}) {
     if (!res.ok) return { ok: false, status: res.status, error: data?.error ?? `Request failed (${res.status})` }
     return { ok: true, status: res.status, data }
   } catch {
-    return { ok: false, status: 0, error: "Can't reach the API — is backend/app.py running?" }
+    return { ok: false, status: 0, error: "Can't reach the API. Is backend/app.py running?" }
   }
 }
