@@ -1,5 +1,5 @@
 # Progress report
 
-Submit **one** Word/PDF on XSite (max 2 pages, Calibri 12). Do not commit the draft Word file.
+Week 5 report (max 2 pages, Calibri 12) was submitted **4 Oct 2026** on XSite as one group file. Do not commit Word/PDF drafts.
 
-A paste-ready draft is in `progress_report.md` on the machine that compiles it (gitignored). Freeze 3 Oct, submit 4 Oct 11:30 PM.
+A local paste draft may exist as `progress_report.md` (gitignored). Final write-up lives in `docs/final-report/` (due 29 Nov).

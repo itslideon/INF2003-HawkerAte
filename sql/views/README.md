@@ -1,8 +1,6 @@
 # Views
 
-Run these after `schema/01_core.sql` and `schema/02_fintech.sql`. Split-related views also need `03_split.sql`.
-
-Run after `01_core.sql` and `02_fintech.sql`. Empty result or zeros mean no paid orders yet — the UI must not invent totals.
+Run after `schema/01_core.sql` and `schema/02_fintech.sql` (and `03_split.sql` / `04_queue.sql` where those tables are referenced). Empty result or zeros mean no paid orders yet — the UI must not invent totals. Then apply `sql/indexes.sql`.
 
 `GET /stalls/:id/takings` and `GET /settlement` read the Iter 2 views. `GET /centres/:id/admin-summary` and `GET /investor/rank` read the Iter 3 views.
 

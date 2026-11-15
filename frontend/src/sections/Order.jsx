@@ -6,17 +6,30 @@ import { useCart } from '../context/CartContext.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import StallRating from '../components/StallRating.jsx'
 import { dishEmoji } from '../lib/dishEmoji.js'
+import { dishPhoto } from '../lib/dishPhoto.js'
 
-// Real menu_item rows have no photo (GET /stalls/:id/menu only sends menu_item_id,
-// name, price, is_available, see docs/api-contract.md), so each dish shows a food emoji picked
-// from its name (see lib/dishEmoji.js) instead of a stock photo that could misrepresent it.
+// GET /stalls/:id/menu has no photo field, so thumbs are frontend-only (dishPhoto.js)
+// with dishEmoji as fallback if the name has no matching image.
 function DishThumb({ name, className = '' }) {
+  const photo = dishPhoto(name)
+  const [broken, setBroken] = useState(false)
+  const showPhoto = photo && !broken
+
   return (
     <div
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center rounded-lg bg-cream ${className}`}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-cream ${className}`}
     >
-      <span className={className.includes('w-full') ? 'text-6xl' : 'text-4xl'}>{dishEmoji(name)}</span>
+      {showPhoto ? (
+        <img
+          src={photo}
+          alt=""
+          onError={() => setBroken(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span className={className.includes('w-full') ? 'text-6xl' : 'text-4xl'}>{dishEmoji(name)}</span>
+      )}
     </div>
   )
 }

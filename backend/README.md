@@ -15,12 +15,13 @@ Reviews (Mongo):
 
 - `GET /stalls/<id>/reviews`
 - `POST /reviews`
+- `PUT /reviews/<id>` / `DELETE /reviews/<id>` — edit or soft-delete your own review (`customer_id` in the body)
 
 Checkout (one MariaDB transaction, then a Mongo `payment_events` doc):
 
 - `POST /orders/pay` — if Mongo fails after SQL commit, SQL still stands and `mongo_written` is `false`. Response includes `queue` (`ticket_no`, `ahead`, `now_serving_ticket`).
 - `POST /orders/<id>/refund` — reversing `ledger_entry`, wallet credit, status `refunded`; never deletes payment/ledger. Mongo refund event after SQL (`mongo_written`). Drops the queue row. `409` if the order already has a Makan split.
-- `POST /dining-sessions` / `GET /dining-sessions/<id>` / `GET /orders/<id>/dining-session` — Makan split on a **paid** order (equal / by_item / custom).
+- `POST /dining-sessions` / `GET /dining-sessions/<id>` / `GET /orders/<id>/dining-session` — **Makan split** on a **paid** order (equal / by_item / custom).
 - `POST /dining-sessions/<id>/settle` — friend wallet → organizer (`split_settle` ledger). Not another stall pay. `400` if the stall order is no longer `paid`. Apply `sql/schema/03_split.sql`.
 
 Queue (`stall_queue`, apply `sql/schema/04_queue.sql`):
@@ -41,12 +42,19 @@ Centre admin and investor (read-only; apply `sql/views/v_admin_centre_compare.sq
 - `GET /centres/<id>/admin-summary` — stalls in one centre from the view; ratings joined from Mongo when it is up
 - `GET /investor/rank` — centres ordered by takings
 
+Mongo analytics (Wileen; `payment_events`):
+
+- `GET /analytics/payments/by-stall`
+- `GET /analytics/payments/by-method` — optional `?stall_id=`
+- `GET /analytics/payments/net-by-stall` — gross / refunded / net
+- `GET /analytics/payments/reconcile` — Mongo vs MariaDB `SUM(payment.amount)` (`all_match`)
+
 ## Setup
 
 From the repo root.
 
 1. Copy `.env.example` to `.env`. Fill `DB_*` (MariaDB) and `MONGO_URI` / `MONGO_DB` (Atlas Database Access user, not the Atlas website login). Don’t commit `.env`.
-2. Create DB `hawkerate`. Apply `sql/schema/01_core.sql` then `sql/schema/02_fintech.sql`, then `sql/schema/04_queue.sql` for the stall line. Optional sample rows: `sql/schema/test_inserts.sql`.
+2. Create DB `hawkerate`. Apply schema in the order in `sql/README.md` (`01_core` → `02_fintech` → `03_split` → `04_queue` → views → `indexes.sql`). Optional sample rows: `sql/schema/test_inserts.sql` after `01_core.sql`. Load NEA centres/menus with `etl/scripts/load_centres_stalls.py` then `load_prices.py` (`etl/README.md`).
 3. Atlas: Network Access must include this machine’s IP or the ping will fail with an SSL handshake error.
 4. Install and run:
 
@@ -64,8 +72,4 @@ Frontend: `VITE_API_BASE_URL=http://localhost:3000` in `frontend/.env`.
 - If MariaDB is not installed as a service, start `mysqld` with a quoted `--defaults-file=` path (the data directory often has a space in it).
 - PowerShell’s `curl` is an alias. For JSON bodies use `curl.exe --%` or `Invoke-RestMethod`.
 
-## Next (API)
-
-1. Confirm `GET /health` with both databases up, then a real `POST /reviews` and `POST /orders/pay` against local MariaDB + Atlas.
-2. Iter 3: dining-session split, keep ledger append-only.
-3. `etl/scripts/generate_orders.py` — same rules as pay; overwrites `etl/raw/generated_orders.csv` for Wileen’s Mongo loader.
+Pay, refund, Makan split, queue, owner/admin/investor, and analytics routes are implemented. Shapes: `docs/api-contract.md`. Volume data: `etl/scripts/generate_orders.py` then `generate_mongo_events.py`.

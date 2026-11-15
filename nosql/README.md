@@ -43,6 +43,6 @@ python nosql/seed.py
 
 - `payment_events` — one document per pay or refund, written after the matching MariaDB commit. PayNow / card / cash don’t all have the same fields (see the example JSON).
 - `reviews` — stall ratings; soft-deleted with `is_deleted`.
-- `investor_watchlist` — optional.
+- `investor_watchlist` — optional collection; the investor **page** reads `GET /investor/rank` (SQL), not this collection.
 
 This is the NoSQL side of the project, not a copy of the SQL ledger. Field names like `stall_id` / `order_id` match the MariaDB columns, stored as strings (`"1"` for id `1`).

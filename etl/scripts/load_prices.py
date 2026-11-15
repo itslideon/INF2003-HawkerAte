@@ -8,7 +8,9 @@ menu_item prices by cuisine_type, instead of random numbers.
 Run AFTER load_centres_stalls.py has created stalls.
 Re-run is safe: a dish already on that stall is left as-is.
 Stalls that only have a test row (for example Fried Rice) still receive
-the rest of their cuisine menu.
+the rest of their cuisine menu. Placeholder names "Stall 1"…"Stall 8" are
+renamed to cuisine labels (unique per centre). Named stalls such as Rice
+are left alone.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 import urllib.request
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
@@ -107,6 +110,47 @@ MENU_BY_CUISINE: dict[str, list[tuple[str, str]]] = {
     ],
 }
 CUISINES = list(MENU_BY_CUISINE.keys())
+
+# load_centres_stalls.py inserts "Stall 1" … "Stall 8". After cuisine is set, those
+# placeholders become hawker-style names so the diner picker is not Stall 1/2/3.
+# Unique per centre. Does not touch named stalls (e.g. Maxwell "Rice" from test_inserts).
+STALL_NAMES_BY_CUISINE: dict[str, list[str]] = {
+    "Chinese": [
+        "Golden Wok",
+        "Wanton House",
+        "Hong Kong Noodles",
+        "Roast & Rice",
+        "Lai Lai Mixed Veg",
+    ],
+    "Malay": [
+        "Nasi Lemak Corner",
+        "Satay Hut",
+        "Mee Rebus Stall",
+        "Kampung Kitchen",
+        "Makcik's Lontong",
+    ],
+    "Indian": [
+        "Prata House",
+        "Banana Leaf",
+        "Murtabak Corner",
+        "Thosai Spot",
+        "Briyani Pot",
+    ],
+    "Western": [
+        "Western Grill",
+        "Chop House",
+        "Fish & Chips",
+        "Burger Stall",
+        "Pasta Plate",
+    ],
+    "Drinks": [
+        "Kopi Kia",
+        "Teh Tarik Bar",
+        "Drink Stall",
+        "Coolers",
+        "Bandung Corner",
+    ],
+}
 
 load_dotenv(REPO_ROOT / ".env")
 
@@ -272,7 +316,56 @@ def generate_menu_items_for_stalls(reference: dict | None = None) -> None:
         conn.close()
 
 
+def rename_placeholder_stalls() -> None:
+    """Replace 'Stall N' names with cuisine-based labels, unique within a centre."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT stall_id, centre_id, name, cuisine_type
+            FROM stall
+            WHERE is_deleted = 0
+            ORDER BY centre_id, stall_id
+            """
+        )
+        rows = cur.fetchall()
+        taken: dict[int, set[str]] = {}
+        for _stall_id, centre_id, name, _cuisine in rows:
+            taken.setdefault(centre_id, set()).add(name)
+
+        renamed = 0
+        skipped = 0
+        for stall_id, centre_id, name, cuisine_type in rows:
+            if not re.fullmatch(r"Stall \d+", name or ""):
+                skipped += 1
+                continue
+            cuisine = (cuisine_type or "").strip() or cuisine_for_stall(stall_id)
+            pool = STALL_NAMES_BY_CUISINE.get(cuisine) or [cuisine or "Hawker Stall"]
+            used = taken.setdefault(centre_id, set())
+            new_name = next((label for label in pool if label not in used), None)
+            if new_name is None:
+                n = 2
+                base = pool[0]
+                while f"{base} {n}" in used:
+                    n += 1
+                new_name = f"{base} {n}"
+            cur.execute(
+                "UPDATE stall SET name = %s WHERE stall_id = %s",
+                (new_name, stall_id),
+            )
+            used.discard(name)
+            used.add(new_name)
+            renamed += 1
+        conn.commit()
+        print(f"stall names: renamed {renamed} placeholders; left {skipped} already named")
+    finally:
+        cur.close()
+        conn.close()
+
+
 if __name__ == "__main__":
     prices = load_price_reference(str(CPI_PATH))
     generate_menu_items_for_stalls(prices)
+    rename_placeholder_stalls()
     print("done")

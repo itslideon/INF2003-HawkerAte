@@ -27,6 +27,7 @@ CSV_PATH = RAW_DIR / "d_68a42f09f350881996d83f9cd73ab02f.csv"
 GEOJSON_PATH = RAW_DIR / "d_4a086da0a5553be1d89383cd90d07ecd.geojson"
 
 # Iter 1: enough stalls for Kristen to browse, not 6k dummy rows.
+# Names are "Stall 1"…"Stall N" here; load_prices.py renames them after cuisine is set.
 STALLS_PER_CENTRE_CAP = 8
 
 POSTAL_RE = re.compile(r"S\((\d+)\)", re.IGNORECASE)

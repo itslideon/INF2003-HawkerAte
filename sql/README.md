@@ -11,7 +11,7 @@ Run the scripts in this order — later files assume earlier tables exist:
 
 1. `schema/01_core.sql` — centres, stalls, menu, customers, wallets
 2. `schema/02_fintech.sql` — orders, lines, payments, ledger
-3. `schema/03_split.sql` — YouTrip split (`dining_session` / `session_member`), plus `chk_session_member_settled` and `chk_ledger_amount`; after `02_fintech.sql`
+3. `schema/03_split.sql` — Makan split tables (`dining_session` / `session_member`), plus `chk_session_member_settled` and `chk_ledger_amount`; after `02_fintech.sql`
 4. `schema/04_queue.sql` — stall line (`ticket_no`); after `02_fintech.sql`
 5. `views/*.sql`
 6. `indexes.sql`
@@ -38,6 +38,8 @@ On Windows, if `mysqld` is not a service, start it with a quoted `--defaults-fil
 Optional. After `01_core.sql`, this drops in one centre / stall / dish / customer / wallet so you can see the tables working. It also has a few commented-out inserts that should fail (bad grade, negative price, etc.). Uncomment one at a time if you want to check the constraints.
 
 Only run that on a throwaway database — it writes real rows.
+
+If you then run `etl/scripts/load_centres_stalls.py`, Maxwell is **skipped** (it already has stall **Rice**). The other NEA centres still load. Skip `test_inserts.sql` if you want Maxwell to get eight seeded stalls like the other centres. `load_prices.py` then names those `Stall N` rows.
 
 ## Conventions we stuck to
 

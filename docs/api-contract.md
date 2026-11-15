@@ -1,12 +1,13 @@
 # API
 
-The UI talks to the Flask app in `backend/`. Field names match the MariaDB columns (`centre_id`, `stall_id`, and so on). Mongo stores those same ids as strings. If an endpoint isn’t implemented yet, the UI shows an empty state instead of making up numbers.
+The UI talks to the Flask app in `backend/`. Field names match the MariaDB columns (`centre_id`, `stall_id`, and so on). Mongo stores those same ids as strings. If a route is unreachable or a view is empty, the UI shows a blank/zero state instead of inventing KPIs. Menu responses have **no photo field** — images are frontend-only.
 
 ## Browse
 
 ```
 GET /centres
   → [{ centre_id, name, address, postal_code, latitude, longitude }]
+  Ordered by name. The diner UI currently opens the first row (no centre picker).
 
 GET /centres/:id/stalls
   → [{ stall_id, name, cuisine_type, grade }]
@@ -24,9 +25,17 @@ GET /stalls/:id/reviews
 POST /reviews
   body: { stall_id, customer_id, rating, comment }
   → { ok, id, stall_id, customer_id, rating }
+
+PUT /reviews/:id
+  body: { customer_id, rating?, comment? }
+  → { ok, id }
+
+DELETE /reviews/:id
+  body: { customer_id }
+  → { ok }
 ```
 
-`rating` is 1–5. Soft-deleted reviews are left out of the GET.
+`rating` is 1–5. Soft-deleted reviews are left out of the GET. PUT/DELETE only match the review owned by that `customer_id`.
 
 ## Checkout
 
@@ -153,3 +162,22 @@ GET /investor/rank
 ```
 
 Ordered by `total_takings` descending. This route does not write anything.
+
+## Analytics (Mongo `payment_events`)
+
+SQL remains the money source of truth. These read the event log (Insights uses by-method + net-by-stall). There is **no** `/analytics/.../by-hour` HTTP route.
+
+```
+GET /analytics/payments/by-stall
+  → [{ stall_id, total, count }]
+
+GET /analytics/payments/by-method
+GET /analytics/payments/by-method?stall_id=
+  → [{ method, total, count }]
+
+GET /analytics/payments/net-by-stall
+  → [{ stall_id, gross, refunded, net, payment_count, refund_count }]
+
+GET /analytics/payments/reconcile
+  → { all_match, stalls: [{ stall_id, sql_total, sql_count, mongo_total, mongo_count, match }] }
+```

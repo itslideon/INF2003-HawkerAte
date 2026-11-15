@@ -2,12 +2,29 @@
 
 Order matters: schema first, then official hawker data, then generated orders, then Mongo events.
 
-1. After `sql/schema/01_core.sql`:
+1. After `sql/schema/01_core.sql`, put the NEA extracts in `etl/raw/` (gitignored). Download from data.gov.sg (same ids as `etl/raw/README.md`):
+
+- Hawker centres CSV: dataset `d_68a42f09f350881996d83f9cd73ab02f` → save as `etl/raw/d_68a42f09f350881996d83f9cd73ab02f.csv`
+- Hawker centres GeoJSON: dataset `d_4a086da0a5553be1d89383cd90d07ecd` → save as `etl/raw/d_4a086da0a5553be1d89383cd90d07ecd.geojson`
+
+Open-data poll URL (then GET the `data.url` it returns):
+
+```
+https://api-open.data.gov.sg/v1/public/api/datasets/<dataset_id>/poll-download
+```
+
+Then:
 
 ```bash
 python etl/scripts/load_centres_stalls.py
 python etl/scripts/load_prices.py
 ```
+
+`load_centres_stalls.py` inserts every NEA centre, then seeds **at most 8 stalls per centre** from cooked-food counts (temporary names `Stall 1` …). Centres that **already have a stall** are skipped — so if you ran `test_inserts.sql` first, Maxwell stays the single **Rice** stall and the other ~106 centres still fill. GeoJSON updates lat/lng where names match.
+
+`load_prices.py` assigns a cuisine in rotation (Chinese / Malay / Indian / Western / Drinks) and inserts that cuisine’s 9 dishes, prices scaled by the hawker-centre CPI series. It then renames `Stall N` to a hawker-style name that matches the cuisine (e.g. Golden Wok, Satay Hut, Prata House). Re-run is safe: existing dish names stay; already-named stalls such as **Rice** are not overwritten.
+
+A full load looks like **107 centres**, **~828–835 stalls**, **~7.4k–7.5k menu items** (Maxwell with Rice vs Maxwell with 8 NEA stalls is why two machines can differ by a few stalls).
 
 2. After `sql/schema/02_fintech.sql` (and `04_queue.sql` so tickets can enqueue):
 

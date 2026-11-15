@@ -15,12 +15,19 @@ You can also `cd frontend` and run `npm install` / `npm run dev` as usual.
 
 `npm --prefix frontend run build` writes a production bundle to `frontend/dist/`. `npm --prefix frontend run preview` serves that bundle.
 
-Until the API is running, the UI uses mock dishes and local orders. Browse, reviews, and checkout talk to Flask when you set `frontend/.env`:
+Browse, reviews, and checkout talk to Flask. Set `frontend/.env`:
 
 ```
 VITE_API_BASE_URL=http://localhost:3000
+VITE_DEMO_CUSTOMER_ID=5
 ```
 
-Vite only exposes variables that start with `VITE_`. Restart `npm run dev` after changing it.
+Login is localStorage only (not real auth). Checkout still pays from the demo wallet id above — customer 1 from `test_inserts.sql` only has $3.50.
+
+Order loads `GET /centres` (sorted by name) and shows **stalls at the first centre**. Stall labels come from MariaDB (`stall.name`). Dish photos are **not** in MariaDB. `GET /stalls/:id/menu` returns name and price; `src/lib/dishPhoto.js` maps each seeded dish name to a file in `src/assets/order-dish-*`. Unknown names fall back to an emoji (`src/lib/dishEmoji.js`).
+
+Other screens: `/checkout`, `/orders/:id/split` (Makan split), `/owner` (takings + refund), `/admin`, `/investor`.
+
+Vite only exposes variables that start with `VITE_`. Restart `npm run dev` after changing `.env`.
 
 `package.json` and `vite.config.js` are the usual React + Tailwind setup; leave them as they are.
