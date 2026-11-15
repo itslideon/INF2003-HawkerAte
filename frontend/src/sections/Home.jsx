@@ -1,29 +1,16 @@
-import { useEffect, useState } from 'react'
 import Button from '../components/Button.jsx'
 import Reveal from '../components/Reveal.jsx'
 import heroDish from '../assets/home-hero-dish.png'
 import { useMenu } from '../context/MenuContext.jsx'
-import { getCentres } from '../lib/browseApi.js'
 
-// Real counts only: GET /centres, and the stalls and menu the Order section already loaded.
+// Real counts only: the centres, stalls and menu already loaded by MenuContext (no extra requests).
 // "—" while loading or when the API is unreachable. Average rating and pickup time are not
 // tracked anywhere, so they are not shown (the old copy had invented 4.8/5 and 18 min).
 export default function Home() {
-  const { centre, stalls, stall, dishes } = useMenu()
-  const [centreCount, setCentreCount] = useState(null)
-
-  useEffect(() => {
-    let cancelled = false
-    getCentres().then((list) => {
-      if (!cancelled && Array.isArray(list)) setCentreCount(list.length)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { centres, centre, stalls, stall, dishes } = useMenu()
 
   const stats = [
-    { value: centreCount ?? '—', label: 'hawker centres' },
+    { value: centres.length > 0 ? centres.length : '—', label: 'hawker centres' },
     {
       value: centre ? stalls.length : '—',
       label: centre ? `${stalls.length === 1 ? 'stall' : 'stalls'} at ${centre.name}` : 'stalls',
@@ -36,7 +23,7 @@ export default function Home() {
 
   return (
     <section id="home" className="flex w-full flex-col items-start bg-cream">
-      <div className="flex w-full flex-col items-start gap-8 px-4 pb-8 pt-8 sm:px-8 sm:pt-10 lg:flex-row lg:gap-[46px] lg:px-12 lg:pb-[42px] lg:pl-16 lg:pt-[54px]">
+      <div className="flex w-full flex-col items-start gap-8 px-4 pb-8 pt-8 sm:px-8 sm:pt-10 lg:flex-row lg:items-stretch lg:gap-[46px] lg:px-12 lg:pb-[42px] lg:pl-16 lg:pt-[54px]">
         <Reveal className="flex w-full flex-col items-start gap-[22px] lg:w-[520px] lg:shrink-0">
           <div className="rounded-full bg-white px-3 py-[7px]">
             <p className="text-xs font-bold text-forest">● SINGAPORE'S HAWKER FAVOURITES</p>
@@ -60,9 +47,9 @@ export default function Home() {
 
         <Reveal
           delay={150}
-          className="relative h-[280px] w-full overflow-hidden rounded-3xl drop-shadow-[0px_10px_14px_rgba(23,37,29,0.09)] sm:h-[360px] lg:h-full lg:flex-1"
+          className="relative h-[280px] w-full overflow-hidden rounded-3xl drop-shadow-[0px_10px_14px_rgba(23,37,29,0.09)] sm:h-[360px] lg:h-auto lg:min-h-[420px] lg:flex-1"
         >
-          <img src={heroDish} alt="Hawker dish spread" className="h-full w-full object-cover" />
+          <img src={heroDish} alt="Hawker dish spread" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute bottom-6 left-6 flex flex-col gap-1 rounded-2xl bg-white p-4">
             <p className="text-base font-bold text-ink">{centre ? centre.name : 'Hawker centres'}</p>
             {centre && (

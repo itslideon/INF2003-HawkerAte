@@ -6,6 +6,8 @@ import { useCart } from '../context/CartContext.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import StallRating from '../components/StallRating.jsx'
 import { dishEmoji } from '../lib/dishEmoji.js'
+import CentreMap, { RegionChips } from '../components/CentreMap.jsx'
+import { regionOf } from '../lib/region.js'
 import { dishPhoto } from '../lib/dishPhoto.js'
 
 // GET /stalls/:id/menu has no photo field, so thumbs are frontend-only (dishPhoto.js)
@@ -24,6 +26,8 @@ function DishThumb({ name, className = '' }) {
         <img
           src={photo}
           alt=""
+          loading="lazy"
+          decoding="async"
           onError={() => setBroken(true)}
           className="h-full w-full object-cover"
         />
@@ -123,8 +127,13 @@ function StatusMessage({ title, body, children }) {
 // Which hawker centre to order from (GET /centres, sorted by name). Hidden when there is only one.
 // Switching centre loads that centre's stalls, so a basket for the old stall is dropped first.
 function CentrePicker({ hasBasket }) {
-  const { centres, centre, selectCentre, switching, switchError } = useMenu()
+  const { centres, centre, selectCentre, switching, switchError, region } = useMenu()
   if (centres.length < 2) return null
+
+  // narrowed by the region chosen on the map; the centre in use always stays in the list
+  const options = centres.filter(
+    (c) => region === 'All' || c.centre_id === centre?.centre_id || regionOf(c.latitude, c.longitude) === region,
+  )
 
   const onChange = (event) => {
     const centreId = Number(event.target.value)
@@ -135,21 +144,26 @@ function CentrePicker({ hasBasket }) {
   return (
     <div className="flex w-full flex-col items-start gap-2">
       <label htmlFor="centre-picker" className="text-[11px] font-bold uppercase text-muted">
-        Choose a hawker centre
+        Centre
       </label>
       <select
         id="centre-picker"
         value={centre?.centre_id ?? ''}
         onChange={onChange}
         disabled={switching}
-        className="w-full max-w-[420px] rounded-full bg-surface px-4 py-2.5 text-[13px] font-semibold text-ink outline-none disabled:cursor-wait disabled:opacity-50"
+        className="w-full rounded-full bg-cream px-4 py-2.5 text-[13px] font-semibold text-ink outline-none disabled:cursor-wait disabled:opacity-50"
       >
-        {centres.map((option) => (
+        {options.map((option) => (
           <option key={option.centre_id} value={option.centre_id}>
             {option.name}
           </option>
         ))}
       </select>
+      {region !== 'All' && (
+        <p className="text-xs text-muted">
+          Showing {options.length} centre{options.length === 1 ? '' : 's'} in the {region} region. Change the region above.
+        </p>
+      )}
       {switching && <p className="text-xs text-muted">Loading the centre…</p>}
       {switchError && (
         <p role="alert" className="text-xs font-semibold text-coral">
@@ -157,6 +171,29 @@ function CentrePicker({ hasBasket }) {
         </p>
       )}
     </div>
+  )
+}
+
+// What the diner picked: the centre's real name, address and stall count.
+function CentreSummary() {
+  const { centre, stalls } = useMenu()
+  if (!centre) return null
+  return (
+    <div className="flex w-full flex-col gap-0.5 rounded-2xl bg-cream p-3.5">
+      <p className="text-sm font-bold text-ink">{centre.name}</p>
+      {centre.address && <p className="text-xs text-muted">{centre.address}</p>}
+      <p className="text-xs font-semibold text-forest">
+        {stalls.length} stall{stalls.length === 1 ? '' : 's'}
+      </p>
+    </div>
+  )
+}
+
+function StepLabel({ step, children }) {
+  return (
+    <p className="text-[11px] font-bold uppercase text-coral">
+      Step {step} <span className="text-muted">·</span> <span className="text-ink">{children}</span>
+    </p>
   )
 }
 
@@ -207,31 +244,33 @@ export default function Order() {
     <section id="order" className="flex w-full flex-col items-start bg-cream">
       <div className="flex w-full flex-1 flex-col gap-6 px-4 py-8 sm:px-8 lg:flex-row lg:gap-[30px] lg:px-12 lg:py-[34px]">
         <div className="flex flex-1 flex-col items-start gap-[22px]">
-          <Reveal className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-col items-start gap-1">
-              <h2 className="text-[28px] font-extrabold text-ink sm:text-[34px]">What are you craving?</h2>
-              <p className="text-sm text-muted">
-                Dine-in at {stall.name}
-                {stall.cuisine_type ? ` • ${stall.cuisine_type}` : ''}
-                <StallRating stallId={stall.stall_id} className="ml-2 font-semibold text-ink" />
-              </p>
-            </div>
-            <div className="w-full rounded-full bg-surface px-[15px] py-[11px] sm:w-60">
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="⌕ Search dishes"
-                className="w-full bg-transparent text-[13px] text-muted outline-none"
-              />
+          <Reveal className="flex w-full flex-col items-start gap-1">
+            <p className="text-xs font-bold uppercase text-coral">Order</p>
+            <h2 className="text-[28px] font-extrabold text-ink sm:text-[34px]">What are you craving?</h2>
+            <p className="text-sm text-muted">
+              Dine-in at {stall.name}
+              {stall.cuisine_type ? ` • ${stall.cuisine_type}` : ''}
+              <StallRating stallId={stall.stall_id} className="ml-2 font-semibold text-ink" />
+            </p>
+          </Reveal>
+
+          <Reveal delay={50} className="flex w-full flex-col items-start gap-3 rounded-3xl bg-surface p-4 sm:p-5">
+            <StepLabel step={1}>Choose a hawker centre</StepLabel>
+            <div className="flex w-full flex-col gap-4 lg:flex-row">
+              <div className="flex w-full flex-col gap-2 lg:flex-1">
+                <CentreMap showChips={false} showUnplaced={false} mapClassName="h-[300px] lg:h-[340px]" />
+              </div>
+              <div className="flex w-full flex-col gap-4 lg:w-[290px] lg:shrink-0">
+                <RegionChips />
+                <CentrePicker hasBasket={itemCount > 0} />
+                <CentreSummary />
+              </div>
             </div>
           </Reveal>
 
-          <CentrePicker hasBasket={itemCount > 0} />
-
           {stalls.length > 1 && (
             <Reveal delay={50} className="flex w-full flex-col items-start gap-2">
-              <p className="text-[11px] font-bold uppercase text-muted">Choose a stall</p>
+              <StepLabel step={2}>Choose a stall</StepLabel>
               <div className="flex flex-wrap items-start gap-2.5">
                 {stalls.map((option) => {
                   const active = option.stall_id === stall.stall_id
@@ -260,6 +299,20 @@ export default function Order() {
               )}
             </Reveal>
           )}
+
+          <Reveal delay={80} className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <StepLabel step={stalls.length > 1 ? 3 : 2}>Pick your dishes</StepLabel>
+            <div className="w-full rounded-full bg-surface px-[15px] py-[11px] sm:w-60">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="⌕ Search dishes"
+                aria-label="Search dishes"
+                className="w-full bg-transparent text-[13px] text-muted outline-none"
+              />
+            </div>
+          </Reveal>
 
           <Reveal delay={100} className="flex w-full flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-start gap-2.5">

@@ -19,8 +19,10 @@ export default function Footer() {
       <div className="flex w-full flex-col gap-10 sm:flex-row sm:justify-between">
         <div className="flex max-w-[320px] flex-col items-start gap-3">
           <div className="flex items-center gap-2.5">
-            <img src={brandMark} alt="" className="size-8" />
-            <span className="text-lg font-extrabold text-white">HawkerAte</span>
+            <img src={brandMark} alt="" className="size-9" />
+            <span className="text-lg font-extrabold text-white">
+              Hawker<span className="text-coral">Ate</span>
+            </span>
           </div>
           <p className="text-sm leading-[1.6] text-white/60">
             Helping Singapore's hawker stalls find their next regular, one plate at a time.
@@ -40,6 +42,12 @@ export default function Footer() {
                 {link.label}
               </a>
             ))}
+            <Link
+              to="/map"
+              className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"
+            >
+              Map
+            </Link>
           </div>
 
           <div className="flex flex-col items-start gap-3">

@@ -33,7 +33,7 @@ export default function Signup() {
               Pull up a seat at the table.
             </h1>
             <p className="max-w-[460px] text-base leading-[1.5] text-muted">
-              Create an account to save your favourite stalls, keep an order history, and reorder in a tap.
+              Create a demo account to keep your orders on this device and reorder in a tap.
             </p>
           </div>
           <div className="flex w-full max-w-[430px] flex-col items-start gap-2 rounded-2xl bg-forest p-5">

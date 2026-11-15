@@ -30,7 +30,7 @@ export default function Login() {
               Your next meal is waiting.
             </h1>
             <p className="max-w-[460px] text-base leading-[1.5] text-muted">
-              Sign in to see saved stalls, recent orders, and the dishes you always come back for.
+              Sign in to see your recent orders and the stalls you have ordered from.
             </p>
           </div>
           <div className="flex w-full max-w-[430px] flex-col items-start gap-2 rounded-2xl bg-forest p-5">

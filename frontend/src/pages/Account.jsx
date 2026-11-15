@@ -47,7 +47,7 @@ export default function Account() {
               {greeting}, {user.name.split(' ')[0]}.
             </h1>
             <p className="text-base leading-[1.5] text-muted">
-              Manage your details, favourite stalls, and everything you've ordered.
+              Manage your details and see everything you've ordered.
             </p>
             <DemoNotice />
           </div>

@@ -20,12 +20,12 @@ export default function MainSite() {
     const targetId = location.state?.scrollTo
     if (!targetId) return
 
-    const frame = requestAnimationFrame(() => {
+    // Not cancelled in a cleanup: clearing the state below re-runs this effect, which would
+    // otherwise cancel the scroll before it happens.
+    setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
+    }, 60)
     navigate(location.pathname, { replace: true, state: {} })
-
-    return () => cancelAnimationFrame(frame)
   }, [location.state, location.pathname, navigate])
 
   return (

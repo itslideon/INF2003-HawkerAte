@@ -13,6 +13,8 @@ import OwnerPage from './pages/OwnerPage.jsx'
 import StallQueuePage from './pages/StallQueuePage.jsx'
 import CentreAdminPage from './pages/CentreAdminPage.jsx'
 import InvestorPage from './pages/InvestorPage.jsx'
+import MapPage from './pages/MapPage.jsx'
+import NotFoundPage from './pages/NotFoundPage.jsx'
 import OrderReadyToasts from './components/OrderReadyToasts.jsx'
 
 function ScrollToTop() {
@@ -45,6 +47,8 @@ export default function App() {
         <Route path="/stall" element={<StallQueuePage />} />
         <Route path="/admin" element={<CentreAdminPage />} />
         <Route path="/investor" element={<InvestorPage />} />
+        <Route path="/map" element={<MapPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   )

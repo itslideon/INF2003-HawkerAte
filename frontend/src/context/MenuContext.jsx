@@ -50,6 +50,7 @@ async function loadCentre(centre) {
 
 export function MenuProvider({ children }) {
   const [state, setState] = useState(INITIAL_STATE)
+  const [region, setRegion] = useState('All') // map region filter, also narrows the centre dropdown
   const requestId = useRef(0) // ignore a response if the diner has since picked something else
 
   useEffect(() => {
@@ -107,7 +108,10 @@ export function MenuProvider({ children }) {
     )
   }, [])
 
-  const value = useMemo(() => ({ ...state, selectCentre, selectStall }), [state, selectCentre, selectStall])
+  const value = useMemo(
+    () => ({ ...state, region, setRegion, selectCentre, selectStall }),
+    [state, region, selectCentre, selectStall],
+  )
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>
 }

@@ -1,3 +1,13 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle id="Brand mark" cx="17" cy="17" r="17" fill="#F05A3C"/>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HawkerAte">
+  <circle cx="32" cy="32" r="32" fill="#F05A3C"/>
+  <!-- steam -->
+  <path d="M20 28c-3.4-3.4 3.4-6 0-10.5" stroke="#FFFDF8" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M28.5 28c-3.4-3.4 3.4-6 0-10.5" stroke="#FFFDF8" stroke-width="2.8" stroke-linecap="round" opacity="0.8"/>
+  <!-- chopsticks -->
+  <path d="M37 35L47.5 14.5" stroke="#DDF06B" stroke-width="3" stroke-linecap="round"/>
+  <path d="M41.5 36L52 17" stroke="#DDF06B" stroke-width="3" stroke-linecap="round"/>
+  <!-- bowl -->
+  <path d="M12 34.5h40c0 11.2-9 19.5-20 19.5S12 45.7 12 34.5z" fill="#FFFDF8"/>
+  <rect x="24.5" y="52.5" width="15" height="3.5" rx="1.75" fill="#FFFDF8"/>
+  <path d="M17.5 40.5h29" stroke="#F05A3C" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
 </svg>

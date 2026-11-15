@@ -28,9 +28,10 @@ export default function OrderStatusPage() {
         />
       ) : (
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
-          <p className="text-2xl font-extrabold text-ink">We couldn't find that order</p>
+          <h1 className="text-2xl font-extrabold text-ink">We couldn't find that order</h1>
           <p className="max-w-[420px] text-base text-muted">
-            Orders placed as a guest are only kept until you close the tab. Sign in to keep your order history.
+            This device has no record of that order. Orders are only remembered on the device that placed them, and only
+            while signed in to the demo account.
           </p>
           <Button variant="dark" onClick={() => navigate('/')}>
             Back to menu

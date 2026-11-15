@@ -12,7 +12,6 @@ export default function EditAccount() {
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState(user?.phone ?? '')
   const [address, setAddress] = useState(user?.address ?? '')
-  const [notifyOffers, setNotifyOffers] = useState(true)
 
   useEffect(() => {
     if (!user) navigate('/login', { replace: true })
@@ -112,24 +111,6 @@ export default function EditAccount() {
               className="w-full bg-transparent text-sm text-ink outline-none"
             />
           </label>
-
-          <div className="flex w-full items-center justify-between">
-            <div className="flex flex-col items-start gap-1">
-              <p className="text-sm font-bold text-ink">Hawker highlights & offers</p>
-              <p className="text-xs text-muted">Email me occasional recommendations</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={notifyOffers}
-              onClick={() => setNotifyOffers((value) => !value)}
-              className={`flex h-6 w-[42px] items-center rounded-full p-[3px] transition-colors duration-200 ${
-                notifyOffers ? 'justify-end bg-forest' : 'justify-start bg-border'
-              }`}
-            >
-              <span className="size-[18px] rounded-full bg-white transition-transform duration-200" />
-            </button>
-          </div>
 
           <div className="flex items-center gap-3">
             <button

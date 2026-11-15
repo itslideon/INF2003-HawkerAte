@@ -91,7 +91,7 @@ export default function CheckoutPage() {
       <div className="flex min-h-screen w-full flex-col items-center bg-cream">
         <Navigation />
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-4">
-          <p className="text-2xl font-extrabold text-ink">Your basket is empty</p>
+          <h1 className="text-2xl font-extrabold text-ink">Your basket is empty</h1>
           <Button variant="dark" onClick={() => navigate('/', { state: { scrollTo: 'order' } })}>
             Browse the menu
           </Button>

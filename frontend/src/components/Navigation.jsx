@@ -96,8 +96,10 @@ export default function Navigation() {
     <nav className="sticky top-0 z-50 flex w-full shrink-0 flex-col bg-surface/90 backdrop-blur">
       <div className="flex h-[99px] w-full items-center justify-between px-4 sm:px-8 lg:px-12">
         <Link to="/" className="flex shrink-0 items-center gap-2.5">
-          <img src={brandMark} alt="HawkerAte" className="size-[34px]" />
-          <span className="text-[20px] font-extrabold text-ink">HawkerAte</span>
+          <img src={brandMark} alt="HawkerAte" className="size-[38px]" />
+          <span className="text-[20px] font-extrabold text-ink">
+            Hawker<span className="text-coral">Ate</span>
+          </span>
         </Link>
 
         <div className="hidden items-center gap-6 text-sm md:flex">
@@ -115,6 +117,10 @@ export default function Navigation() {
               </a>
             )
           })}
+          <Link to="/map" className={linkClass(location.pathname === '/map')}>
+            Map
+            <span className={underlineClass(location.pathname === '/map')} />
+          </Link>
           <Link to="/owner" className={linkClass(location.pathname === '/owner')}>
             Owner
             <span className={underlineClass(location.pathname === '/owner')} />
@@ -152,6 +158,14 @@ export default function Navigation() {
               </a>
             )
           })}
+          <Link
+            to="/map"
+            className={`w-full rounded-lg px-2 py-2.5 text-sm ${
+              location.pathname === '/map' ? 'font-bold text-forest' : 'font-medium text-muted'
+            }`}
+          >
+            Map
+          </Link>
           <Link
             to="/owner"
             className={`w-full rounded-lg px-2 py-2.5 text-sm ${
