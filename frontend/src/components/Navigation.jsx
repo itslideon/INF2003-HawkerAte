@@ -102,7 +102,7 @@ export default function Navigation() {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-6 text-sm md:flex">
+        <div className="hidden items-center gap-9 text-sm lg:flex">
           {sectionLinks.map((link) => {
             const active = onMainSite && activeSection === link.id
             return (
@@ -117,10 +117,6 @@ export default function Navigation() {
               </a>
             )
           })}
-          <Link to="/map" className={linkClass(location.pathname === '/map')}>
-            Map
-            <span className={underlineClass(location.pathname === '/map')} />
-          </Link>
           <Link to="/owner" className={linkClass(location.pathname === '/owner')}>
             Owner
             <span className={underlineClass(location.pathname === '/owner')} />
@@ -134,7 +130,7 @@ export default function Navigation() {
             onClick={() => setMobileOpen((open) => !open)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
-            className="flex size-9 items-center justify-center rounded-full text-ink transition-opacity duration-200 hover:opacity-60 md:hidden"
+            className="flex size-9 items-center justify-center rounded-full text-ink transition-opacity duration-200 hover:opacity-60 lg:hidden"
           >
             {mobileOpen ? <CloseIcon className="size-5" /> : <MenuIcon className="size-5" />}
           </button>
@@ -142,7 +138,7 @@ export default function Navigation() {
       </div>
 
       {mobileOpen && (
-        <div className="flex flex-col items-start gap-1 border-t border-border px-4 pb-5 pt-3 md:hidden">
+        <div className="flex flex-col items-start gap-1 border-t border-border px-4 pb-5 pt-3 sm:px-8 lg:hidden">
           {sectionLinks.map((link) => {
             const active = onMainSite && activeSection === link.id
             return (
@@ -158,14 +154,6 @@ export default function Navigation() {
               </a>
             )
           })}
-          <Link
-            to="/map"
-            className={`w-full rounded-lg px-2 py-2.5 text-sm ${
-              location.pathname === '/map' ? 'font-bold text-forest' : 'font-medium text-muted'
-            }`}
-          >
-            Map
-          </Link>
           <Link
             to="/owner"
             className={`w-full rounded-lg px-2 py-2.5 text-sm ${
