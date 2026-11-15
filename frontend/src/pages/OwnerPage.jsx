@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Navigation from '../components/Navigation.jsx'
 import Reveal from '../components/Reveal.jsx'
 import Button from '../components/Button.jsx'
+import RefundPanel from '../components/RefundPanel.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import { getStallTakings } from '../lib/ownerApi.js'
 
@@ -132,6 +133,8 @@ export default function OwnerPage() {
             </div>
           </>
         )}
+
+        {stallId != null && <RefundPanel stallId={stallId} onRefunded={load} />}
       </div>
     </div>
   )

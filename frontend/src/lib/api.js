@@ -36,3 +36,22 @@ export async function apiPost(path, body) {
     return { ok: false, error: "Can't reach the API — is backend/app.py running?" }
   }
 }
+
+// For callers that must tell "404 = nothing there yet" apart from "API unreachable":
+// keeps the HTTP status and the server's own error message. status 0 = never got a reply.
+export async function apiRequest(path, { method = 'GET', body } = {}) {
+  if (!BASE_URL) return { ok: false, status: 0, error: 'API not configured (set VITE_API_BASE_URL)' }
+
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) return { ok: false, status: res.status, error: data?.error ?? `Request failed (${res.status})` }
+    return { ok: true, status: res.status, data }
+  } catch {
+    return { ok: false, status: 0, error: "Can't reach the API — is backend/app.py running?" }
+  }
+}

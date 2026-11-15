@@ -83,6 +83,13 @@ export default function OrderConfirmation({ order, queue, isReady, collected, on
         </p>
         <button
           type="button"
+          onClick={() => navigate(`/orders/${order.order_id}/split`)}
+          className="w-full rounded-full bg-lime px-5 py-3 text-sm font-bold text-ink transition-opacity duration-200 hover:opacity-60"
+        >
+          Makan split — share the bill with friends
+        </button>
+        <button
+          type="button"
           onClick={() => navigate('/')}
           className="w-full rounded-full bg-ink px-5 py-3 text-sm font-bold text-white transition-opacity duration-200 hover:opacity-60"
         >

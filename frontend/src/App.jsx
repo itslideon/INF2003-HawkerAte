@@ -8,8 +8,11 @@ import Account from './pages/Account.jsx'
 import EditAccount from './pages/EditAccount.jsx'
 import CheckoutPage from './pages/CheckoutPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
+import MakanSplitPage from './pages/MakanSplitPage.jsx'
 import OwnerPage from './pages/OwnerPage.jsx'
 import StallQueuePage from './pages/StallQueuePage.jsx'
+import CentreAdminPage from './pages/CentreAdminPage.jsx'
+import InvestorPage from './pages/InvestorPage.jsx'
 import OrderReadyToasts from './components/OrderReadyToasts.jsx'
 
 function ScrollToTop() {
@@ -37,8 +40,11 @@ export default function App() {
         <Route path="/account/edit" element={<EditAccount />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orders/:orderId" element={<OrderStatusPage />} />
+        <Route path="/orders/:orderId/split" element={<MakanSplitPage />} />
         <Route path="/owner" element={<OwnerPage />} />
         <Route path="/stall" element={<StallQueuePage />} />
+        <Route path="/admin" element={<CentreAdminPage />} />
+        <Route path="/investor" element={<InvestorPage />} />
       </Routes>
     </>
   )

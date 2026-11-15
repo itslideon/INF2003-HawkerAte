@@ -43,12 +43,24 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-col items-start gap-3">
-            <p className="text-xs font-bold uppercase text-white/40">For stalls</p>
+            <p className="text-xs font-bold uppercase text-white/40">Dashboards</p>
             <Link
               to="/stall"
               className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"
             >
               Stall queue
+            </Link>
+            <Link
+              to="/admin"
+              className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"
+            >
+              Centre admin
+            </Link>
+            <Link
+              to="/investor"
+              className="text-sm text-white/70 transition-opacity duration-200 hover:opacity-60"
+            >
+              Investor view
             </Link>
           </div>
 

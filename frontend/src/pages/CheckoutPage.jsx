@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import { useOrderTracker, requestNotificationPermission } from '../context/OrderTrackerContext.jsx'
-import { payOrder } from '../lib/orderApi.js'
+import { DEMO_CUSTOMER_ID, payOrder } from '../lib/orderApi.js'
 import {
   PAYMENT_METHODS,
   buildOrderLines,
@@ -16,10 +16,6 @@ import {
   saveOrderForUser,
 } from '../lib/orderStore.js'
 
-// Stopgap: the app's login is fake (customer_id = email) but POST /orders/pay needs an
-// int customer_id with a wallet in MariaDB. 1 is the seeded Test User in
-// sql/schema/test_inserts.sql. Replace with the real id once signup exists.
-const DEMO_CUSTOMER_ID = 1
 
 export default function CheckoutPage() {
   const { user } = useAuth()
