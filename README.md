@@ -56,7 +56,7 @@ Folder READMEs have the extra detail (Windows MariaDB, PowerShell `curl`, Atlas,
 
 `generate_orders.py` default **2000** orders → `etl/raw/generated_orders.csv` → `generate_mongo_events.py`.
 
-The diner Order page loads the **first centre by name** (often ABC Brickworks after the NEA load) and lets you pick stalls at that centre. There is no centre picker yet. Dish photos are frontend-only (`frontend/src/lib/dishPhoto.js`).
+The diner Order page has a **centre dropdown** (`GET /centres`, sorted by name). Default is the first centre (often ABC Brickworks after the NEA load) or the last one saved in the browser. Stall chips switch cuisine at that centre. Dish photos are frontend-only (`frontend/src/lib/dishPhoto.js`).
 
 ## Design notes
 

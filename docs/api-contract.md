@@ -7,7 +7,7 @@ The UI talks to the Flask app in `backend/`. Field names match the MariaDB colum
 ```
 GET /centres
   → [{ centre_id, name, address, postal_code, latitude, longitude }]
-  Ordered by name. The diner UI currently opens the first row (no centre picker).
+  Ordered by name. The diner UI has a centre picker; default is the first row (or the last centre saved in the browser).
 
 GET /centres/:id/stalls
   → [{ stall_id, name, cuisine_type, grade }]

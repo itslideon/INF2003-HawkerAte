@@ -45,6 +45,8 @@ VITE_API_BASE_URL=http://localhost:3000
 VITE_DEMO_CUSTOMER_ID=5
 ```
 
+Checkout always pays from that integer wallet. Customer **1** from `test_inserts.sql` only has $3.50.
+
 ## 4. API + UI
 
 ```bash
@@ -52,7 +54,7 @@ pip install -r backend/requirements.txt
 python backend/app.py
 ```
 
-http://localhost:3000/health — `mariadb` and `mongo` should be `"up"`.
+http://localhost:3000/health — `mariadb` and `mongo` should be `"up"`. Flask has no homepage; use `/health` or the Vite app.
 
 ```bash
 npm --prefix frontend install
@@ -63,13 +65,14 @@ Open http://localhost:5173.
 
 ## 5. Demo path
 
-1. **Order** — first centre in `GET /centres` (sorted by **name**, so often ABC Brickworks, not Maxwell). Use the stall chips to switch cuisine. Maxwell **Rice** is still there for the money demo; there is no centre picker yet. Add a cheap dish (Kopi) if the demo wallet is tight.
-2. Checkout — simulated PayNow / card / cash (same wallet).
-3. **Makan split** — type friend `customer_id`s that already have wallets (e.g. 2 and 3 after `generate_orders.py`). `test_inserts.sql` alone only creates customer **1**. Friends do not log in.
-4. **Owner** — takings + refund by order id. Do not refund an order that already has a Makan split (API returns 409).
-5. **Centre admin** / **Investor** — SQL views. Extra centres from the NEA load show here even if Order still opens the first centre.
+1. **Order** — use the **Centre** dropdown (and optional **Map** at `/map`) to pick a hawker centre. Default is the first centre by name (often ABC Brickworks after the NEA load), or the last centre saved in the browser. Stall chips switch cuisine at that centre. For the money demo, pick **Maxwell Food Centre** → **Rice**. Add a cheap dish (Kopi) if the demo wallet is tight. Dish photos are frontend files mapped by dish name, not MariaDB columns.
+2. **Checkout** — simulated PayNow / card / cash. All three debit the same MariaDB wallet (cash is not a separate till).
+3. **Makan split** — after pay, open split on that order. Type friend `customer_id`s that already have wallets (e.g. 2 and 3 after `generate_orders.py`). `test_inserts.sql` alone only creates customer **1**. Friends do not log in; **Settle** on the same screen stands in for each friend. Equal and custom splits work; split-by-item is in the API but not wired on this screen.
+4. **Owner** (`/owner`) — takings + refund by order id. Do not refund an order that already has a Makan split (API returns 409).
+5. **Cook** (`/stall`) — queue for the selected stall. Anyone who knows the URL can mark ready (there is no staff login). After `generate_orders.py`, a busy stall can have a very long list.
+6. **Centre admin** (`/admin`) / **Investor** (`/investor`) — SQL views. Extra centres from the NEA load show here.
 
-Login on the site does not check a password and is not stored in MariaDB.
+**Login / Account** on the site is localStorage only: it does not check a password, is not stored in MariaDB, and does **not** change who pays. Wallet, split, and refund always use `VITE_DEMO_CUSTOMER_ID`. Contact on the home page is display-only.
 
 ## 6. Optional volume data
 
