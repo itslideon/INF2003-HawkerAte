@@ -11,7 +11,7 @@ export function getOrderSession(orderId) {
 
 // equal:   { order_id, split_type: 'equal', customer_ids: [organizer, friend, ...] }
 // custom:  { order_id, split_type: 'custom', members: [{ customer_id, share_amount }, ...] }
-// by_item: needs real order_line_ids, which the API doesn't return yet, not used by the UI.
+// by_item (assignments by order_line_id) is not offered in the UI: no route returns the order line ids.
 export function createSession(body) {
   return apiRequest('/dining-sessions', { method: 'POST', body })
 }

@@ -4,6 +4,7 @@ import Reveal from '../components/Reveal.jsx'
 import StallSwitcher from '../components/StallSwitcher.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import { getStallQueue, markOrderReady } from '../lib/queueApi.js'
+import { useSingleFlight } from '../lib/singleFlight.js'
 
 const POLL_MS = 3000
 
@@ -12,6 +13,10 @@ const POLL_MS = 3000
 // ticket (GET /orders/:id/queue), so their screen moves when the cook presses Ready.
 // Single-stall MVP, same as the diner side: uses the first stall from MenuContext.
 // No staff login exists yet, so this page is open to anyone who knows /stall.
+// A busy stall can have thousands of orders waiting (after the generated data load), so the cook sees
+// only the next few by default.
+const VISIBLE = 8
+
 export default function StallQueuePage() {
   const { status, stall } = useMenu()
   const stallId = stall?.stall_id
@@ -19,6 +24,7 @@ export default function StallQueuePage() {
   const [queue, setQueue] = useState(undefined) // undefined = loading, null = API unreachable
   const [busyOrderId, setBusyOrderId] = useState(null)
   const [error, setError] = useState(null)
+  const [showAll, setShowAll] = useState(false)
 
   const refresh = useCallback(async () => {
     if (stallId == null) return
@@ -41,7 +47,9 @@ export default function StallQueuePage() {
     }
   }, [stallId])
 
-  const markReady = async (orderId) => {
+  const once = useSingleFlight()
+  const markReady = (orderId) => once(() => markReadyNow(orderId))
+  const markReadyNow = async (orderId) => {
     setBusyOrderId(orderId)
     setError(null)
     const result = await markOrderReady(orderId)
@@ -74,7 +82,7 @@ export default function StallQueuePage() {
   } else {
     body = (
       <div className="flex w-full flex-col gap-3">
-        {line.map((entry, index) => {
+        {line.slice(0, showAll ? line.length : VISIBLE).map((entry, index) => {
           const isNext = index === 0
           return (
             <div
@@ -104,6 +112,15 @@ export default function StallQueuePage() {
             </div>
           )
         })}
+        {line.length > VISIBLE && (
+          <button
+            type="button"
+            onClick={() => setShowAll((value) => !value)}
+            className="self-start rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white transition-opacity duration-200 hover:opacity-60"
+          >
+            {showAll ? `Show only the next ${VISIBLE}` : `Show all ${line.length} waiting orders`}
+          </button>
+        )}
       </div>
     )
   }

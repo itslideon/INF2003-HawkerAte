@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext.jsx'
 import { useMenu } from '../context/MenuContext.jsx'
 import { useOrderTracker, requestNotificationPermission } from '../context/OrderTrackerContext.jsx'
 import { DEMO_CUSTOMER_ID, payOrder } from '../lib/orderApi.js'
+import { useSingleFlight } from '../lib/singleFlight.js'
 import {
   PAYMENT_METHODS,
   buildOrderLines,
@@ -22,13 +23,15 @@ export default function CheckoutPage() {
   const { stall } = useMenu()
   const { basketEntries, subtotal, itemCount, clearBasket } = useCart()
   const navigate = useNavigate()
-  const { statuses, queues, trackOrder, collectOrder } = useOrderTracker()
+  const { statuses, queues, trackOrder } = useOrderTracker()
   const [method, setMethod] = useState(null)
   const [placedOrder, setPlacedOrder] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
-  const placeOrder = async () => {
+  const once = useSingleFlight()
+  const placeOrder = () => once(placeOrderNow)
+  const placeOrderNow = async () => {
     if (!method || submitting) return
     setSubmitting(true)
     setError(null)
@@ -54,7 +57,8 @@ export default function CheckoutPage() {
       order_id: newOrderId,
       stall_id: stall.stall_id,
       stall_name: stall.name,
-      customer_id: user?.customer_id ?? null,
+      customer_id: user?.customer_id ?? null, // login email: only the key for this device's order history
+      paid_by_customer_id: DEMO_CUSTOMER_ID, // the real payer, as the backend knows it
       items: buildOrderLines(newOrderId, basketEntries),
       total_amount: serverTotal,
       method,
@@ -79,7 +83,6 @@ export default function CheckoutPage() {
           queue={queues[placedOrder.order_id]}
           isReady={statuses[placedOrder.order_id] === 'ready' || statuses[placedOrder.order_id] === 'collected'}
           collected={statuses[placedOrder.order_id] === 'collected'}
-          onCollect={() => collectOrder(placedOrder.order_id)}
           heading="Order placed!"
         />
       </div>

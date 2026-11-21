@@ -51,6 +51,7 @@ export default function Contact() {
           onSubmit={submitForm}
         >
           <p className="text-[22px] font-extrabold text-ink">Send us a note</p>
+          <p className="text-xs text-muted">Demo form: nothing you type here is sent anywhere.</p>
           <div className="flex w-full flex-col items-start gap-3.5 sm:flex-row">
             <FormField
               label="FIRST NAME"

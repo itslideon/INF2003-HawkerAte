@@ -6,6 +6,7 @@ import Button from '../components/Button.jsx'
 import { useOrderTracker } from '../context/OrderTrackerContext.jsx'
 import { DEMO_CUSTOMER_ID } from '../lib/orderApi.js'
 import { createSession, getOrderSession, settleShare } from '../lib/splitApi.js'
+import { useSingleFlight } from '../lib/singleFlight.js'
 
 const MAX_FRIENDS = 3 // demo scope: organizer + up to 3 friends
 const money = (value) => `$${Number(value).toFixed(2)}`
@@ -58,7 +59,7 @@ export default function MakanSplitPage() {
     body = (
       <Notice
         title="We couldn't find that order"
-        text="Open the split from your order page so we know the total. Guest orders are only kept until the tab closes."
+        text="Open the split from your order page so we know the total. This device has no record of that order."
       />
     )
   } else {
@@ -136,7 +137,9 @@ function CreateForm({ order, onCreated }) {
 
   const setFriend = (index, value) => setFriends((prev) => prev.map((v, i) => (i === index ? value : v)))
 
-  const submit = async () => {
+  const once = useSingleFlight()
+  const submit = () => once(submitNow)
+  const submitNow = async () => {
     setSubmitting(true)
     setError(null)
     const payload =
@@ -182,14 +185,6 @@ function CreateForm({ order, onCreated }) {
               {option.label}
             </button>
           ))}
-          <button
-            type="button"
-            disabled
-            title="Needs the API to return each order line's id, which it doesn't yet"
-            className="cursor-not-allowed rounded-full bg-cream px-4 py-2 text-xs font-semibold text-muted opacity-60"
-          >
-            By item (coming soon)
-          </button>
         </div>
       </fieldset>
 
@@ -285,7 +280,9 @@ function SessionView({ session, order, onChange }) {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
 
-  const settle = async (customerId) => {
+  const once = useSingleFlight()
+  const settle = (customerId) => once(() => settleNow(customerId))
+  const settleNow = async (customerId) => {
     setBusyId(customerId)
     setError(null)
     const result = await settleShare(session.session_id, customerId)

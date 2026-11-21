@@ -5,6 +5,17 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
+// 4xx messages are written for the user ("insufficient wallet balance"), so they are shown as they
+// are. 5xx messages are raw database or driver errors (table names, hosts), so the visitor gets a
+// plain sentence and the real text only goes to the console for the developer.
+function friendlyError(status, serverMessage) {
+  if (status >= 500) {
+    if (serverMessage) console.warn(`API error ${status}:`, serverMessage)
+    return `The server had a problem (error ${status}). Please try again in a moment.`
+  }
+  return serverMessage ?? `Request failed (${status})`
+}
+
 export async function apiGet(path) {
   if (!BASE_URL) return null // no backend configured yet, caller shows a waiting state
 
@@ -30,7 +41,7 @@ export async function apiPost(path, body) {
       body: JSON.stringify(body),
     })
     const data = await res.json().catch(() => null)
-    if (!res.ok) return { ok: false, error: data?.error ?? `Request failed (${res.status})` }
+    if (!res.ok) return { ok: false, error: friendlyError(res.status, data?.error) }
     return { ok: true, data }
   } catch {
     return { ok: false, error: "Can't reach the API. Is backend/app.py running?" }
@@ -49,7 +60,7 @@ export async function apiRequest(path, { method = 'GET', body } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     })
     const data = await res.json().catch(() => null)
-    if (!res.ok) return { ok: false, status: res.status, error: data?.error ?? `Request failed (${res.status})` }
+    if (!res.ok) return { ok: false, status: res.status, error: friendlyError(res.status, data?.error) }
     return { ok: true, status: res.status, data }
   } catch {
     return { ok: false, status: 0, error: "Can't reach the API. Is backend/app.py running?" }

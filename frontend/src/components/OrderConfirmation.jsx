@@ -75,6 +75,7 @@ export default function OrderConfirmation({ order, queue, isReady, collected, on
           {order.method === 'cash'
             ? `Paid $${order.total_amount.toFixed(2)} as cash (simulated), taken from the demo wallet.`
             : `Paid with ${paymentMethodLabel(order.method)} (simulated).`}
+          {order.paid_by_customer_id != null ? ` Paid as customer ${order.paid_by_customer_id}.` : ''}
         </p>
         <p className="text-xs text-muted">
           {order.customer_id

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getStallQueue } from '../lib/queueApi.js'
 import { refundOrder } from '../lib/refundApi.js'
+import { useSingleFlight } from '../lib/singleFlight.js'
 
 const POLL_MS = 5000
+const VISIBLE = 5 // the line can be very long; show the next few and let the owner expand it
 
 // Owner refund: POST /orders/:id/refund. The API has no "list this stall's orders" route yet, so
 // orders come from two places: the stall's live queue (orders not yet handed over) and a box to
@@ -15,6 +17,7 @@ export default function RefundPanel({ stallId, onRefunded }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [done, setDone] = useState(null)
+  const [showAll, setShowAll] = useState(false)
 
   const loadQueue = useCallback(async () => {
     if (stallId == null) return
@@ -29,7 +32,9 @@ export default function RefundPanel({ stallId, onRefunded }) {
     return () => clearInterval(timer)
   }, [stallId, loadQueue])
 
-  const confirmRefund = async () => {
+  const once = useSingleFlight()
+  const confirmRefund = () => once(confirmRefundNow)
+  const confirmRefundNow = async () => {
     setBusy(true)
     setError(null)
     setDone(null)
@@ -121,7 +126,7 @@ export default function RefundPanel({ stallId, onRefunded }) {
         ) : line.length === 0 ? (
           <p className="text-sm text-muted">No orders waiting right now.</p>
         ) : (
-          line.map((entry) => (
+          line.slice(0, showAll ? line.length : VISIBLE).map((entry) => (
             <div
               key={entry.order_id}
               className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-3"
@@ -144,6 +149,15 @@ export default function RefundPanel({ stallId, onRefunded }) {
               </button>
             </div>
           ))
+        )}
+        {line.length > VISIBLE && (
+          <button
+            type="button"
+            onClick={() => setShowAll((value) => !value)}
+            className="self-start text-xs font-semibold text-forest underline transition-opacity duration-200 hover:opacity-60"
+          >
+            {showAll ? `Show only the next ${VISIBLE}` : `Show all ${line.length} orders in line`}
+          </button>
         )}
       </div>
 

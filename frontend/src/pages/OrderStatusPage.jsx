@@ -7,7 +7,7 @@ import { useOrderTracker } from '../context/OrderTrackerContext.jsx'
 export default function OrderStatusPage() {
   const { orderId } = useParams()
   const navigate = useNavigate()
-  const { statuses, queues, getOrder, collectOrder } = useOrderTracker()
+  const { statuses, queues, getOrder } = useOrderTracker()
   const order = getOrder(orderId)
 
   return (
@@ -23,7 +23,6 @@ export default function OrderStatusPage() {
             order.status === 'ready'
           }
           collected={statuses[order.order_id] === 'collected'}
-          onCollect={() => collectOrder(order.order_id)}
           heading="Your order"
         />
       ) : (
